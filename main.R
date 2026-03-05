@@ -33,20 +33,28 @@ library(sf)
 source("utils.R")
 
 # Path with the cloudSEN12 dataset
-CLOUDSEN12_PATH <- "/media/csaybar/Elements SE/cloudSEN12/"
+CLOUDSEN12_DIR <- "/dss/dsshome1/00/di54xat/cloudsen12"
 
+VERSION <- "CLOUDFREE_DEV/"
+
+CLOUDSEN12_PATH <- file.path(CLOUDSEN12_DIR, VERSION)
 
 # 1. Initialize Earth Engine ----------------------------------------------
-ee_Initialize()
+ee_check()
 
+ee_Initialize(project="earthobserver-cc-476010")
+ee_Authenticate()
 
 # 2. Load cloudsen12 initial dataset (after image tile selection) ---------
-cloudsen12_init <- read.csv("data/cloudsen12_initial.csv") %>% 
+# SISA: cloudfree dev (head10)
+cloudsen12_init <- read.csv("data/cloudsen12_initial_cloudfree_dev.csv") %>% 
   as_tibble()
 
 # 3. Select an CloudSEN12 image patch (IP) --------------------------------
 index <- 1
 cloudsen12_ip <- cloudsen12_init[index,]
+
+# TODO: loop over all indices?
 
 # 4. Create a cloudSEN12 IP. ----------------------------------------------
 cloudsen12_ip_stars <- ip_creator(dataset = cloudsen12_ip, output = CLOUDSEN12_PATH)

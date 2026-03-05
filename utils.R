@@ -14,11 +14,11 @@ LAND_COVER_CLASSES <- list(
 )
 
 ip_creator <- function(dataset, output) {
-  # Directory path
+  # Directory pathR
   dirpath <- sprintf("%s/%s", output, dataset$label_type)
 
   # Load S2 images
-  s2l1c <- ee$Image(sprintf("COPERNICUS/S2/%s", dataset$sen2))
+  s2l1c <- ee$Image(sprintf("COPENICUS/S2/%s", dataset$sen2))
   s2l2a <- ee$Image(sprintf("COPERNICUS/S2_SR/%s", dataset$sen2))
   s2_date <- ee_get_date_img(s2l1c)$time_start
   

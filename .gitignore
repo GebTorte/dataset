@@ -3,3 +3,7 @@ metadata
 .Rproj.user
 .Rhistory
 .RData
+
+
+# data
+data/*/*
