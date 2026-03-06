@@ -209,6 +209,7 @@ dependencies = [
     { name = "polars" },
     { name = "rasterio" },
     { name = "tacoreader" },
+    { name = "tifffile" },
 ]
 
 [package.metadata]
@@ -219,6 +220,7 @@ requires-dist = [
     { name = "polars", specifier = ">=1.38.1" },
     { name = "rasterio", specifier = ">=1.5.0" },
     { name = "tacoreader", specifier = ">=2.4.20" },
+    { name = "tifffile", specifier = ">=2026.3.3" },
 ]
 
 [[package]]
@@ -1255,6 +1257,18 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/fb/d4/7090c650b60c56f23d9a66dc48f4795582c4baf8ae5e68f3755192795ddc/tacozip-0.12.0-cp313-cp313-musllinux_1_2_aarch64.whl", hash = "sha256:a663bfa901e4f81e38e8538d426e6ef241311b509f9a88dfccbb9e365f353fa9", size = 83269, upload-time = "2025-11-02T19:48:11.556Z" },
     { url = "https://files.pythonhosted.org/packages/71/15/3c4a30af2a3416f18f63412955f6df295e18ddd6099dc1d6eabaddc48e61/tacozip-0.12.0-cp313-cp313-musllinux_1_2_x86_64.whl", hash = "sha256:f2598d5634993a70e5fc98c90cc6285125bf3460e8b096e458e80a46261f8954", size = 78702, upload-time = "2025-11-02T19:48:12.627Z" },
     { url = "https://files.pythonhosted.org/packages/75/d4/2d77f0ef6bd0eb2784f880be54f3de6fc417d142e71349129dd887aaa043/tacozip-0.12.0-cp313-cp313-win_amd64.whl", hash = "sha256:f030e7675dcbe33b6868d3e87adf2d15a2b5463a9b6770769a3a1424826d5b24", size = 144227, upload-time = "2025-11-02T19:48:13.732Z" },
+]
+
+[[package]]
+name = "tifffile"
+version = "2026.3.3"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "numpy" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/c5/cb/2f6d79c7576e22c116352a801f4c3c8ace5957e9aced862012430b62e14f/tifffile-2026.3.3.tar.gz", hash = "sha256:d9a1266bed6f2ee1dd0abde2018a38b4f8b2935cb843df381d70ac4eac5458b7", size = 388745, upload-time = "2026-03-03T19:14:38.134Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/1a/e4/e804505f87627cd8cdae9c010c47c4485fd8c1ce31a7dd0ab7fcc4707377/tifffile-2026.3.3-py3-none-any.whl", hash = "sha256:e8be15c94273113d31ecb7aa3a39822189dd11c4967e3cc88c178f1ad2fd1170", size = 243960, upload-time = "2026-03-03T19:14:35.808Z" },
 ]
 
 [[package]]
