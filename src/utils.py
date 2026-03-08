@@ -35,5 +35,4 @@ def convert_tiffs_en_masse(folder:Path=Path("./data/p509/high"), of:Path=Path(".
 
 
 if __name__ == "__main__":
-    # TODO implement conversion for sephamore multiprocessing
     pass
