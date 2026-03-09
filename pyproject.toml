@@ -20,5 +20,6 @@ dependencies = [
     "tensorboard>=2.20.0",
     "tifffile>=2026.3.3",
     "torch>=2.10.0",
+    "torchinfo>=1.8.0",
     "torchvision>=0.25.0",
 ]
