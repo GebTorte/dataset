@@ -32,7 +32,7 @@ class LWFUNetTrainer:
         user: str,
         csv_name: str = "cloudsen12_initial_cloudfree_dev.csv",
         num_classes: int = 3, # free, cloud, shadow
-        in_channels: int = 11, # without cirrus
+        in_channels: int = 12, # without cirrus
         base_channels: int = 32,
         epochs: int = 32,
         batch_size: int = 16,
@@ -46,7 +46,7 @@ class LWFUNetTrainer:
         warmup_steps: int = 100,
         save_every_n_steps: int = 20,
         experiment_group: str = "LWF-DLR",
-        experiment_id: str = "baseline_unet_slurm",
+        experiment_id: str = "cloudsen12_baseline_unet_slurm",
     ):
         """
         Initialize the LWF U-Net trainer.

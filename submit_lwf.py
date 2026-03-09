@@ -22,7 +22,7 @@ def submit_lwf_training(
     batch_size: int = 12,
     num_workers: int = 16,
     prefetch_factor: int = 8,
-    experiment_id: str = "baseline_unet_slurm",
+    experiment_id: str = "cloudsen12_baseline_unet_slurm",
     partition: str = "hpda2_compute_gpu",
     time: str = "03:00:00",
     gpus_per_node: int = 1,
@@ -122,7 +122,7 @@ def submit_lwf_training(
         Submitted job object.
     """
     root_hpc = Path("/dss/dsstbyfs02/pn49ci/pn49ci-dss-0026")
-    user_path = root_hpc / user  / repo
+    user_path = root_hpc / user
     log_dir = user_path / "experiments/LWF-DLR/slurm_logs"
     log_dir.mkdir(parents=True, exist_ok=True)
 
@@ -254,7 +254,7 @@ def main():  # noqa: D103
     parser.add_argument(
         "--csv-name",
         type=str,
-        default="dev_1000_file.csv",
+        default="cloudsen12_initial_cloudfree_dev_1000.csv",
         help='CSV file with NPZ/TIF paths (default: "dev_1000_file.csv")',
     )
 
@@ -285,7 +285,7 @@ def main():  # noqa: D103
     parser.add_argument(
         "--experiment-id",
         type=str,
-        default="baseline_unet_slurm",
+        default="cloudsen12_baseline_unet_slurm",
         help="Unique experiment identifier (default: baseline_unet_slurm)",
     )
 
@@ -309,7 +309,7 @@ def main():  # noqa: D103
         help="Number of GPUs per node (default: 1)",
     )
     parser.add_argument(
-        "--mem-gb", type=int, default=256, help="Memory in GB (default: 256)"
+        "--mem-gb", type=int, default=128, help="Memory in GB (default: 256)"
     )
     parser.add_argument(
         "--account",
