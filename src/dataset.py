@@ -113,10 +113,10 @@ class S2TIFDataSet(torch.utils.data.Dataset):
         # Max across channels
         max_cloud = torch.max(cmask, dim=1)[0]
         # < min_lvl from CloudSimulator
-        binary_mask_cloud = (max_cloud < self.transparency_threshold).float()
+        binary_mask_cloud = (max_cloud < self.transparency_threshold).long()
 
         max_shadow = torch.max(smask, dim=1)[0]
-        binary_mask_shadow = (max_shadow < self.transparency_threshold).float()
+        binary_mask_shadow = (max_shadow < self.transparency_threshold).long()
 
 
         # We convert the masks to a single channel:
@@ -129,8 +129,10 @@ class S2TIFDataSet(torch.utils.data.Dataset):
         # TODO use argmax
         y = torch.max(binary_mask_cloud * 2, binary_mask_shadow * 1) # ranking cloud over shadow
 
-
-        return cl, y
+        # cl has to be (C, H, W)
+        # y of shape (H,W)
+        # squeeze as output from SatCloudGen has extra dimension
+        return cl.squeeze(), y.squeeze()
 
 
     def _get_transforms(self, idx):
@@ -206,5 +208,5 @@ class S2TIFDataSet(torch.utils.data.Dataset):
         y = np.max(cmask * 2, smask * 1) # ranking cloud over shadow
 
 
-        return X, y
+        return X.squeeze(), y
 
