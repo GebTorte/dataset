@@ -13,11 +13,9 @@ class S2TIFDataSet(torch.utils.data.Dataset):
     Load s2 patches
     - maybe add selector for cloudfree here?
     - generate GT cloud mask here
-    - 
 
-
-    NOTE: this loads images of dimension (b,512,512) from TIF 
-    TODO (?): Adapt to 256x256 (patch images into 4? or use Randomcrop!) 
+    TODO (?): Adapt to 256x256 (patch images into 4 to use all training data)
+        Using RandomCrop atm. 
     """
 
     def __init__(self, img_paths, data_root, transparency_threshold:float = 0.05, seed:int=42, randomness:float = 0.01, omitt_band_idxs:list[int] = [10], crop_size:int=256):

@@ -8,6 +8,8 @@ metadata
 # data
 data/*
 
+info.txt
+
 
 # Custom
 data/

@@ -255,7 +255,7 @@ def main():  # noqa: D103
         "--csv-name",
         type=str,
         default="cloudsen12_initial_cloudfree_dev_1000.csv",
-        help='CSV file with NPZ/TIF paths (default: "dev_1000_file.csv")',
+        help='CSV file with NPZ/TIF paths (default: "cloudsen12_initial_cloudfree_dev_1000.csv")',
     )
 
     # Training hyperparameters
@@ -359,7 +359,7 @@ def main():  # noqa: D103
         default=None,
         help=(
             "Class weights for CE loss "
-            "(default: [1.0, 50.0, 5.0] for background, linear_veg, patchy_veg)"
+            "(example: [1.0, 50.0, 5.0] for background, linear_veg, patchy_veg)"
         ),
     )
     parser.add_argument(

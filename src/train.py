@@ -30,6 +30,7 @@ class LWFUNetTrainer:
     def __init__(
         self,
         user: str,
+        repo: str = "cloudsen12", 
         csv_name: str = "cloudsen12_initial_cloudfree_dev.csv",
         num_classes: int = 3, # free, cloud, shadow
         in_channels: int = 12, # without cirrus
@@ -111,8 +112,8 @@ class LWFUNetTrainer:
 
         self.root_hpc = Path("/dss/dsstbyfs02/pn49ci/pn49ci-dss-0026")
         self.user_path = self.root_hpc / user
-        self.data_path = self.root_hpc / "data"
-        self.data_root = self.data_path / "LWF-DLR"
+        self.data_path = self.user_path / repo / "data"
+        self.data_root = self.data_path
 
         self.experiment_dir = self.user_path / f"experiments/{experiment_group}"
         self.experiment_dir.mkdir(parents=True, exist_ok=True)
@@ -137,21 +138,20 @@ class LWFUNetTrainer:
         logger.info("Using device: %s", self.device)
 
         # Load dataset
-        #csv_path = self.data_root / self.csv_name
+        csv_path = self.data_path / self.csv_name
         #dataset_df = pd.read_csv(csv_path)
         #npz_names = dataset_df["npz_path"].tolist()
 
-        # TODO: adapt
-        tif_paths = select_patches_from_dataset(csv_path, self.data_root)
+        file_names = select_patches_from_dataset(csv_path, self.data_root)
 
         # TODO: add shuffle to split?
 
         # Train/val split
-        split_idx = int((1 - self.val_split) * len(npz_names))
-        train_names = npz_names[:split_idx]
-        val_names = npz_names[split_idx:]
+        split_idx = int((1 - self.val_split) * len(file_names))
+        train_names = file_names[:split_idx]
+        val_names = file_names[split_idx:]
 
-        logger.info("Total samples: %d", len(npz_names))
+        logger.info("Total samples: %d", len(file_names))
         logger.info("Training samples: %d", len(train_names))
         logger.info("Validation samples: %d", len(val_names))
 
