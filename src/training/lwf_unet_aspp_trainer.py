@@ -410,6 +410,7 @@ class LWFUNetASPPTrainer:
         """
         self.user = user
         self.repo = repo
+        self.seed=seed
         self.csv_name = csv_name
         self.num_classes = num_classes
         self.in_channels = in_channels
