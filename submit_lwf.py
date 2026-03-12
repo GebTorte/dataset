@@ -9,7 +9,8 @@ import submitit
 #from oma24.training.lwf_unet_aspp_trainer import LWFUNetASPPTrainer
 #from oma24.training.lwf_unet_loss_trainer import LWFUNetLossTrainer
 #from oma24.training.lwf_unet_skeleton_trainer import LWFUNetSkeletonTrainer
-from src.train import LWFUNetTrainer
+from src.training.basic_unet_trainer import LWFUNetTrainer
+from src.training.lwf_unet_aspp_trainer import LWFUNetASPPTrainer
 
 logger = logging.getLogger(__name__)
 
@@ -17,8 +18,9 @@ logger = logging.getLogger(__name__)
 def submit_lwf_training(
     user: str,
     repo: str = "cloudsen12",
+    seed:int = 42,
     csv_name: str = "cloudsen12_initial_cloudfree_dev_1000.csv",
-    epochs: int = 32,
+    epochs: int = 16,
     batch_size: int = 12,
     num_workers: int = 16,
     prefetch_factor: int = 8,
@@ -189,6 +191,7 @@ def submit_lwf_training(
         # ASPP + Residual + Weighted CE + Dice Loss
         trainer = LWFUNetASPPTrainer(
             user=user,
+            seed=seed,
             csv_name=csv_name,
             epochs=epochs,
             batch_size=batch_size,
@@ -220,6 +223,7 @@ def submit_lwf_training(
         # Baseline: Standard U-Net with CE Loss
         trainer = LWFUNetTrainer(
             user=user,
+            seed=seed,
             csv_name=csv_name,
             epochs=epochs,
             batch_size=batch_size,
@@ -261,6 +265,12 @@ def main():  # noqa: D103
     # Training hyperparameters
     parser.add_argument(
         "--epochs", type=int, default=32, help="Number of training epochs (default: 32)"
+    )
+    parser.add_argument(
+        "--seed",
+        type=int,
+        default=42,
+        help="Random seed (int) to pass onto torch and numpy"
     )
     parser.add_argument(
         "--batch-size",
@@ -445,6 +455,7 @@ def main():  # noqa: D103
     # Submit the job
     job = submit_lwf_training(
         user=args.user,
+        seed=args.seed,
         csv_name=args.csv_name,
         epochs=args.epochs,
         batch_size=args.batch_size,

@@ -30,6 +30,7 @@ class LWFUNetTrainer:
     def __init__(
         self,
         user: str,
+        seed:int|None=42,
         repo: str = "cloudsen12", 
         csv_name: str = "cloudsen12_initial_cloudfree_dev.csv",
         num_classes: int = 3, # free, cloud, shadow
@@ -92,6 +93,8 @@ class LWFUNetTrainer:
             Unique experiment identifier (default: "baseline_unet_slurm").
         """
         self.user = user
+        self.seed=seed
+        self.repo = repo
         self.csv_name = csv_name
         self.num_classes = num_classes
         self.in_channels = in_channels
@@ -137,11 +140,12 @@ class LWFUNetTrainer:
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         logger.info("Using device: %s", self.device)
 
+        # set random seed
+        if self.seed:
+            torch.manual_seed(self.seed)
+
         # Load dataset
         csv_path = self.data_path / self.csv_name
-        #dataset_df = pd.read_csv(csv_path)
-        #npz_names = dataset_df["npz_path"].tolist()
-
         file_names = select_patches_from_dataset(csv_path, self.data_root)
 
         # TODO: add shuffle to split?
@@ -156,8 +160,9 @@ class LWFUNetTrainer:
         logger.info("Validation samples: %d", len(val_names))
 
         # Create datasets and dataloaders
-        train_dataset = S2TIFDataSet(train_names, self.data_root)
-        val_dataset = S2TIFDataSet(val_names, self.data_root)
+        # TODO: add seed etc to init params
+        train_dataset = S2TIFDataSet(train_names, self.data_root, seed=self.seed)
+        val_dataset = S2TIFDataSet(val_names, self.data_root, seed=self.seed)
 
         self.train_loader = DataLoader(
             train_dataset,

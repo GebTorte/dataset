@@ -102,6 +102,9 @@ class UNet(nn.Module):
         out = self.out(dec1)  # 1024×1024×3
         return out
 
+
+
+
 if __name__ == "__main__":
     # Create model and inspect
     model = UNet(in_channels=11, num_classes=3, base_channels=32).to(device)
