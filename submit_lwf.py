@@ -269,7 +269,7 @@ def main():  # noqa: D103
     parser.add_argument(
         "--seed",
         type=int,
-        default=42,
+        default=42, #consider setting to None, so default mode will be random
         help="Random seed (int) to pass onto torch and numpy"
     )
     parser.add_argument(
