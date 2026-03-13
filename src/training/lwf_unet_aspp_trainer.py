@@ -320,7 +320,7 @@ class LWFUNetASPPTrainer:
         self,
         user: str,
         repo: str = "cloudsen12", 
-        csv_name: str = "cloudsen12_initial_cloudfree_dev.csv",
+        csv_name: str = "cloudsen12_initial_cloudfree_dev_200.csv",
         seed:int | None = 42,
         num_classes: int = 3,
         in_channels: int = 12,

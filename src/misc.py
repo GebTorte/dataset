@@ -30,6 +30,7 @@ def select_patches_from_dataset(csv_path, dataset_root, res_folder:str="p509", s
         else:
             annotation_folder = 'no-label'
 
+        # TODO: search train/test/val folders
         # Construct the path to the patch
         patch_path = os.path.join(
             dataset_root,

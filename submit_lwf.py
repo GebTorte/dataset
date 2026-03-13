@@ -19,7 +19,7 @@ def submit_lwf_training(
     user: str,
     repo: str = "cloudsen12",
     seed:int = 42,
-    csv_name: str = "cloudsen12_initial_cloudfree_dev_1000.csv",
+    csv_name: str = "cloudsen12_initial_cloudfree_high.csv",
     epochs: int = 16,
     batch_size: int = 12,
     num_workers: int = 16,
@@ -258,8 +258,8 @@ def main():  # noqa: D103
     parser.add_argument(
         "--csv-name",
         type=str,
-        default="cloudsen12_initial_cloudfree_dev_1000.csv",
-        help='CSV file with NPZ/TIF paths (default: "cloudsen12_initial_cloudfree_dev_1000.csv")',
+        default="cloudsen12_initial_cloudfree_high.csv",
+        help='CSV file with NPZ/TIF paths (default: "cloudsen12_initial_cloudfree_high.csv")',
     )
 
     # Training hyperparameters
@@ -319,7 +319,7 @@ def main():  # noqa: D103
         help="Number of GPUs per node (default: 1)",
     )
     parser.add_argument(
-        "--mem-gb", type=int, default=128, help="Memory in GB (default: 256)"
+        "--mem-gb", type=int, default=256, help="Memory in GB (default: 256)"
     )
     parser.add_argument(
         "--account",
