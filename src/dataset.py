@@ -30,14 +30,15 @@ class S2TIFDataSet(torch.utils.data.Dataset):
                 transparency_threshold:float = 0.05,
                 seed:int|None=42, 
                 randomness:float = 0.01,
-                omitt_band_idxs:list[int] = [10], 
+                omitt_band_idxs:list[int] = [], # default omitt 10?
                 crop_size:int=256,
                 thick_cloud_percent: float = 0.7,
                 thin_cloud_percent: float = 0.3,
+                locality_degree: tuple[int, int] = (1,1),
         ):
         """
         
-        seed: int - needed for synthetic cloud mask generation
+        seed: int - needed for reproducible synthetic cloud mask generation
         """
         self.img_paths = img_paths
         self.data_root = data_root
@@ -48,8 +49,10 @@ class S2TIFDataSet(torch.utils.data.Dataset):
         self.transparency_threshold = transparency_threshold
         self.thick_cloud_percent = thick_cloud_percent
         self.thin_cloud_percent = thin_cloud_percent
+        self.locality_degree = locality_degree
 
         # set torch random seed for random transform ops
+        # only for this file!!
         if self.seed:
             torch.manual_seed(seed) 
 
@@ -100,30 +103,49 @@ class S2TIFDataSet(torch.utils.data.Dataset):
 
         X = self.transform_rc(X)
 
-        # TODO: replace with CloudGenerator?
-
+        # TODO: replace add_cloud_and_shadow... with CloudGenerator?
         # only pass bands idx 1-12, 
         # manual mask is at band 15 index 14,
         # band 14 is weird
-        # band 1 index 0 is sentinel1 band probably
+        # band 1 index 0 is sentinel1 band  - use as feature perhaps, but not in cloudgenerator
 
         X = X[1:13, ...]
         
-        # TODO: add thick cloud with random chance
+        cmask, smask = np.zeros_like(shape(X.shape[:-2])), np.zeros_like(shape(X.shape[:-2]))
 
-        cl, cmask, smask = add_cloud_and_shadow(X,
-            return_cloud=True,
-            channel_magnitude=stat_mag_scaler(
-                X,
-                omitt_band_idxs=self.omitt_band_idxs, 
-                seed=self.seed, 
-                randomness=self.randomness
-            ),
-            cloud_color=True,
-        )
+        locality1 = torch.randint(*self.locality_degree, (1,)).item() if self.locality_degree[0] < self.locality_degree[-1] else 1
 
-        # TODO: add thin cloud generation with a random chance (implemented in notebook)
-    
+        if torch.rand(1).item() < self.thick_cloud_percent:
+            X, cmask, smask = add_cloud_and_shadow(X,
+                return_cloud=True,
+                channel_magnitude=stat_mag_scaler(
+                    X,
+                    omitt_band_idxs=self.omitt_band_idxs, 
+                    seed=self.seed, 
+                    randomness=self.randomness
+                ),
+                cloud_color=True,
+                locality_degree=locality1,
+            )
+        if torch.rand(1).item() < self.thin_cloud_percent:
+            X, cmask_thin, smask_thin = add_cloud_and_shadow(X,
+                return_cloud=True,
+                channel_magnitude=stat_mag_scaler(
+                    X,
+                    omitt_band_idxs=self.omitt_band_idxs, 
+                    seed=self.seed, 
+                    randomness=self.randomness
+                ),
+                min_lvl=0.4,
+                max_lvl=0.6,
+                decay_factor=1.5,
+                cloud_color=True,
+                locality_degree=1,
+            )
+
+            # TODO: if reached here, combine cmasks and smasks
+            #cmask = np.clip(cmask + cmask_thin, 0, 1)
+            smask = np.clip(smask + smask_thin, 0, 1)
 
         # convert transparency masks to binary masks
         # this is why we take < 1
@@ -133,26 +155,33 @@ class S2TIFDataSet(torch.utils.data.Dataset):
         # < min_lvl from CloudSimulator
         binary_mask_cloud = (max_cloud < self.transparency_threshold).long()
 
+        max_cloud_thin = torch.max(cmask_thin, dim=1)[0]
+        binary_mask_cloud_thin = (max_cloud_thin < self.transparency_threshold).long()
+
         max_shadow = torch.max(smask, dim=1)[0]
         binary_mask_shadow = (max_shadow < self.transparency_threshold).long()
 
-
-        # We convert the masks to a single channel:
-        # 0: no cloud, 1: cloud, 2: shadow
-        # assuming exclusive masks
-        #y = y[0] * 0 + y[1] * 1 + y[2] * 2
-
-
         # if non-exclusive masks create gt mask like this
         # because we work with quasi-refelctance and not probabilities
-        y = torch.max(binary_mask_cloud * 2, binary_mask_shadow * 1) # ranking cloud over shadow
-        # TODO: convert labels to cloudsen12 labels
+        # ranking cloud over thin cloud over shadow over clear 0
+        y = torch.max(binary_mask_cloud * 3, binary_mask_cloud_thin * 2, binary_mask_shadow * 1) 
+        
         # TODO add to other datasets
+        # converting ranking-labels to cloudsen12-labels
+        y_mapper = {
+            0: 0,
+            3: 1,
+            2: 2,
+            1: 3,
+        }
+
+        y = y.squeeze()
+        y = np.vectorize(y_mapper.get)(y)
 
         # cl has to be (C, H, W)
         # y of shape (H,W)
         # squeeze as output from SatCloudGen has extra dimension
-        return cl.squeeze(), y.squeeze()
+        return cl.squeeze(), y
 
 
 class S2TIFDataSet_256_4x(torch.utils.data.Dataset):
@@ -289,8 +318,6 @@ class S2TIFDataSet512(torch.utils.data.Dataset):
     - maybe add selector for cloudfree here?
     - generate GT cloud mask here
 
-    TODO (?): Adapt to 256x256 (patch images into 4 to use all training data)
-        Using RandomCrop atm. 
     """
 
     def __init__(self, img_paths, data_root, transparency_threshold:float = 0.05, seed:int|None=42, randomness:float = 0.01, omitt_band_idxs:list[int] = [10], crop_size:int=256):

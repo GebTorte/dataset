@@ -1,7 +1,7 @@
 import os
 import pandas as pd
 
-def select_patches_from_dataset(csv_path, dataset_root, res_folder:str="p509", suffix:str = ".tif"):
+def select_patches_from_dataset(csv_path, dataset_root, res_folder:str="p509", type_folder:str = "train", suffix:str = ".tif"):
     """
     Selects patches from the CloudSEN12 dataset based on a CSV file.
 
@@ -12,7 +12,6 @@ def select_patches_from_dataset(csv_path, dataset_root, res_folder:str="p509", s
     Returns:
         list: List of paths to the selected patches.
     """
-    # Read the CSV
     df = pd.read_csv(csv_path)
 
     selected_patches_paths = []
@@ -36,6 +35,7 @@ def select_patches_from_dataset(csv_path, dataset_root, res_folder:str="p509", s
             dataset_root,
             res_folder,
             annotation_folder,
+            type_folder,
             roi,
             sen2_id + suffix,
         )
