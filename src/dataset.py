@@ -8,17 +8,33 @@ import numpy as np
 from SatelliteCloudGenerator.src.band_magnitudes import stat_mag_scaler
 from SatelliteCloudGenerator.src.CloudSimulator import add_cloud_and_shadow
 
+
+class ValS2TIFDataSet(torch.utils.data.Dataset):
+    #TODO: implement validation dataset whihc loads
+    # cloudSEN12 GT masks
+    pass
+
 class S2TIFDataSet(torch.utils.data.Dataset):
     """
-    Load s2 patches
-    - maybe add selector for cloudfree here?
-    - generate GT cloud mask here
+    Generating Cloud GT ontop of cloudfree images.
+    Load s2 (select bands 1:13) patches.
+    Using RandomCrop to get 256x256 (crop_size) patches. 
 
-    TODO (?): Adapt to 256x256 (patch images into 4 to use all training data)
-        Using RandomCrop atm. 
+    TODO
+    - maybe add selector for cloudfree here? 
     """
 
-    def __init__(self, img_paths, data_root, transparency_threshold:float = 0.05, seed:int|None=42, randomness:float = 0.01, omitt_band_idxs:list[int] = [10], crop_size:int=256):
+    def __init__(self,
+                img_paths,
+                data_root,
+                transparency_threshold:float = 0.05,
+                seed:int|None=42, 
+                randomness:float = 0.01,
+                omitt_band_idxs:list[int] = [10], 
+                crop_size:int=256,
+                thick_cloud_percent: float = 0.7,
+                thin_cloud_percent: float = 0.3,
+        ):
         """
         
         seed: int - needed for synthetic cloud mask generation
@@ -30,6 +46,8 @@ class S2TIFDataSet(torch.utils.data.Dataset):
         self.crop_size = crop_size
         self.randomness = randomness
         self.transparency_threshold = transparency_threshold
+        self.thick_cloud_percent = thick_cloud_percent
+        self.thin_cloud_percent = thin_cloud_percent
 
         # set torch random seed for random transform ops
         if self.seed:
@@ -74,8 +92,6 @@ class S2TIFDataSet(torch.utils.data.Dataset):
 
         idx: int = index of the tensor to load
         """
-        # load TIF file from path at idx and return as Tensor
-        # TODO: check if dimensions in right order
         img = tifffile.imread(self.img_paths[idx])
 
         X = TF.to_tensor(img)
@@ -85,14 +101,20 @@ class S2TIFDataSet(torch.utils.data.Dataset):
         X = self.transform_rc(X)
 
         # TODO: replace with CloudGenerator?
-        # only pass bands idx 3-14 as the first 3 bands of cloudsen12 are S1 polarizations
+
+        # only pass bands idx 1-12, 
+        # manual mask is at band 15 index 14,
+        # band 14 is weird
+        # band 1 index 0 is sentinel1 band probably
+
+        X = X[1:13, ...]
         
-        input_tensor = X[3:15, ...]
-        
-        cl, cmask, smask = add_cloud_and_shadow(input_tensor,
+        # TODO: add thick cloud with random chance
+
+        cl, cmask, smask = add_cloud_and_shadow(X,
             return_cloud=True,
             channel_magnitude=stat_mag_scaler(
-                input_tensor,
+                X,
                 omitt_band_idxs=self.omitt_band_idxs, 
                 seed=self.seed, 
                 randomness=self.randomness
@@ -100,10 +122,7 @@ class S2TIFDataSet(torch.utils.data.Dataset):
             cloud_color=True,
         )
 
-        # TODO: add info back to tensor and return this (as it includes S1 bands)
-        #print(cl.shape, "cl shape")
-        #X[3:, ...] = cl
-        #X = X.unsqueeze(0)
+        # TODO: add thin cloud generation with a random chance (implemented in notebook)
     
 
         # convert transparency masks to binary masks
@@ -125,8 +144,10 @@ class S2TIFDataSet(torch.utils.data.Dataset):
 
 
         # if non-exclusive masks create gt mask like this
-        # TODO use argmax
+        # because we work with quasi-refelctance and not probabilities
         y = torch.max(binary_mask_cloud * 2, binary_mask_shadow * 1) # ranking cloud over shadow
+        # TODO: convert labels to cloudsen12 labels
+        # TODO add to other datasets
 
         # cl has to be (C, H, W)
         # y of shape (H,W)
@@ -134,40 +155,133 @@ class S2TIFDataSet(torch.utils.data.Dataset):
         return cl.squeeze(), y.squeeze()
 
 
-    def _get_transforms(self, idx):
+class S2TIFDataSet_256_4x(torch.utils.data.Dataset):
+    """
+    Load s2 patches
+    - maybe add selector for cloudfree here?
+    - generate GT cloud mask here
+
+    TODO (?): Adapt to 256x256 (patch images into 4 to use all training data)
+    """
+
+    def __init__(self, img_paths, data_root, transparency_threshold:float = 0.05, seed:int|None=42, randomness:float = 0.01, omitt_band_idxs:list[int] = [10]):
+        """
+        
+        seed: int - needed for synthetic cloud mask generation
+        """
+        self.img_paths = img_paths
+        self.data_root = data_root
+        self.seed = seed
+        self.omitt_band_idxs = omitt_band_idxs # excluding cirrus by default
+        self.crop_size = crop_size
+        self.randomness = randomness
+        self.transparency_threshold = transparency_threshold
+
+        # set torch random seed for random transform ops
+        if self.seed:
+            torch.manual_seed(seed) 
+
+        self.transforms = v2.Compose([
+            v2.RandomHorizontalFlip(p=0.5),
+            #v2.ConvertImageDtype(torch.float32)
+            #v2.ToDtype(torch.float32, scale=True),
+        ])
+
+        self.toFloat32Transform = v2.Compose([
+            v2.ToDtype(torch.float32, scale=True),
+        ])
+
+
+    def __len__(self):
+        return len(self.img_paths) * 4
+
+    def __getitem__(self, idx):
         """
 
         idx: int = index of the tensor to load
         """
-        # load TIF file from path at idx and return as Tensor
+        # apply transform/augmentation
+        return self._get_tensor(idx=idx)
 
-        img = tifffile.imread(self.img_paths[idx])
+    
+    def _get_tensor(self, idx):
+        """
+        idx: int = index of the tensor to load
+        """
+        # 1. Map the 0 to (N*4)-1 index back to original data
+        original_idx = idx // 4
+        quad_idx = idx % 4  # 0=TL, 1=TR, 2=BL, 3=BR
 
-        X = TF.to_tensor(img)
+        # loading creates 4x overhead!
+        img = tifffile.imread(self.img_paths[original_idx])
 
-        X = self.transforms(X)
+        # only pass bands idx 0-11, manual mask is at band 15 index 14        
+        
+        X = TF.to_tensor(img)[1:13, ...]
+
+        X = self.toFloat32Transform(X)
+
+        # 2. Apply Reflect Padding (509 -> 512)
+        # Pad: (left, right, top, bottom)
+        X = F.pad(X, (0, 3, 0, 3), mode='reflect')
+
+        # 3. Select the correct 256x256 quadrant
+        if quad_idx == 0:   # Top-Left
+            X = X[:, 0:256, 0:256]
+        elif quad_idx == 1: # Top-Right
+            X = X[:, 0:256, 256:512]
+        elif quad_idx == 2: # Bottom-Left
+            X = X[:, 256:512, 0:256]
+        else:               # Bottom-Right
+            X = X[:, 256:512, 256:512]
 
         # TODO: replace with CloudGenerator?
         cl, cmask, smask = add_cloud_and_shadow(X,
             return_cloud=True,
             channel_magnitude=stat_mag_scaler(
                 X,
-                bands=bands, 
-                seed=seed, 
-                randomness=0.01
+                omitt_band_idxs=self.omitt_band_idxs, 
+                seed=self.seed, 
+                randomness=self.randomness
             ),
             cloud_color=True,
         )
+
+        # TODO: add info back to tensor and return this (as it includes S1 bands)
+        #print(cl.shape, "cl shape")
+        #X[3:, ...] = cl
+        #X = X.unsqueeze(0)
+    
+        # convert transparency masks to binary masks
+        # this is why we take < 1
+
+        # Max across channels
+        max_cloud = torch.max(cmask, dim=1)[0]
+        # < min_lvl from CloudSimulator
+        binary_mask_cloud = (max_cloud < self.transparency_threshold).long()
+
+        max_shadow = torch.max(smask, dim=1)[0]
+        binary_mask_shadow = (max_shadow < self.transparency_threshold).long()
+
 
         # We convert the masks to a single channel:
         # 0: no cloud, 1: cloud, 2: shadow
         # assuming exclusive masks
         #y = y[0] * 0 + y[1] * 1 + y[2] * 2
 
-        # if non-exclusive masks transform like this
-        y = torch.max(cmask * 2, smask * 1) # ranking cloud over shadow
 
-        return X.squeeze(), y.squeeze()
+        # if non-exclusive masks create gt mask like this
+        # TODO use argmax
+        y_stacked = np.stack(np.zeros_like(binary_mask_cloud), binary_mask_cloud, binary_mask_shadow)
+        y = np.argmax(y_stacked, axis=0)
+        
+        #y = torch.max(binary_mask_cloud * 2, binary_mask_shadow * 1) # ranking cloud over shadow
+
+        # cl has to be (C, H, W)
+        # y of shape (H,W)
+        # squeeze as output from SatCloudGen has extra dimension
+        return cl.squeeze(), y.squeeze()
+
 
 class S2TIFDataSet512(torch.utils.data.Dataset):
     """
@@ -217,13 +331,12 @@ class S2TIFDataSet512(torch.utils.data.Dataset):
         X = self.Transform(X)
 
         # TODO: replace with CloudGenerator?
-        # only pass bands idx 3-14 as the first 3 bands of cloudsen12 are S1 polarizations
-        input_tensor = X[3:15, ...]
+        X = X[1:13, ...]
         
-        cl, cmask, smask = add_cloud_and_shadow(input_tensor,
+        cl, cmask, smask = add_cloud_and_shadow(X,
             return_cloud=True,
             channel_magnitude=stat_mag_scaler(
-                input_tensor,
+                X,
                 omitt_band_idxs=self.omitt_band_idxs, 
                 seed=self.seed, 
                 randomness=self.randomness
