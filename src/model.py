@@ -31,7 +31,7 @@ class UNet(nn.Module):
         base_channels: Number of channels in first layer (default: 32)
     """
 
-    def __init__(self, in_channels=1, num_classes=3, base_channels=32):
+    def __init__(self, in_channels=1, num_classes=4, base_channels=32):
         super().__init__()
 
         # ENCODER

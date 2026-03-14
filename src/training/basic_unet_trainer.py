@@ -33,7 +33,7 @@ class LWFUNetTrainer:
         seed:int|None=42,
         repo: str = "cloudsen12", 
         csv_name: str = "cloudsen12_initial_cloudfree_dev.csv",
-        num_classes: int = 3, # free, cloud, shadow
+        num_classes: int = 4, # free, cloud, thin cloud, shadow
         in_channels: int = 12, # without cirrus
         base_channels: int = 32,
         epochs: int = 32,

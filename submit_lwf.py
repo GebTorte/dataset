@@ -199,7 +199,7 @@ def submit_lwf_training(
             prefetch_factor=prefetch_factor,
             experiment_id=experiment_id,
             use_class_weights=use_class_weights,
-            class_weights=class_weights if class_weights else [1.0, 50.0, 5.0],
+            class_weights=class_weights if class_weights else [1.0, 15.0, 10., 5.0],
             use_dice_loss=use_dice_loss,
             dice_loss_weight=dice_loss_weight,
             use_residual=use_residual,
@@ -365,11 +365,11 @@ def main():  # noqa: D103
     parser.add_argument(
         "--class-weights",
         type=float,
-        nargs=3,
+        nargs=4,
         default=None,
         help=(
             "Class weights for CE loss "
-            "(example: [1.0, 50.0, 5.0] for background, linear_veg, patchy_veg)"
+            "(example: [1.0, 15.0, 10.0, 5.0] for clear, cloud, thin cloud, shadow"
         ),
     )
     parser.add_argument(

@@ -12,7 +12,7 @@ from torch.utils.tensorboard import SummaryWriter
 from tqdm.auto import tqdm
 
 
-from src.dataset import S2TIFDataSet512
+from src.dataset import S2TIFDataSet, S2TIFDataSet512
 from src.misc import select_patches_from_dataset
 
 
@@ -159,7 +159,7 @@ class UNet(nn.Module):
     def __init__(
         self,
         in_channels=12,
-        num_classes=3,
+        num_classes=4,
         base_channels=32,
         use_residual=True,
         use_aspp=True,
@@ -322,7 +322,7 @@ class LWFUNetASPPTrainer:
         repo: str = "cloudsen12", 
         csv_name: str = "cloudsen12_initial_cloudfree_dev_200.csv",
         seed:int | None = 42,
-        num_classes: int = 3,
+        num_classes: int = 4,
         in_channels: int = 12,
         base_channels: int = 32,
         epochs: int = 32,
@@ -431,7 +431,7 @@ class LWFUNetASPPTrainer:
 
         # Loss configuration
         self.use_class_weights = use_class_weights
-        self.class_weights = class_weights or [1.0, 50.0, 5.0]
+        self.class_weights = class_weights or [1.0, 15., 10., 5.]
         self.use_dice_loss = use_dice_loss
         self.dice_loss_weight = dice_loss_weight
         self.dice_loss_smooth = dice_loss_smooth
