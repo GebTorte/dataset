@@ -29,6 +29,69 @@ logger = logging.getLogger(__name__)
 
 
 class DiceLoss(nn.Module):
+    """Dice Loss for segmentation tasks.
+
+    Dice coefficient measures overlap between prediction and ground truth.
+    Dice Loss = 1 - Dice coefficient
+
+    Args:
+        smooth: Smoothing factor to avoid division by zero (default: 1.0)
+        apply_to_classes: List of class indices to compute loss for (None = all classes)
+    """
+
+    def __init__(self, smooth=1.0, apply_to_classes=None):
+        super().__init__()
+        self.smooth = smooth
+        self.apply_to_classes = apply_to_classes
+
+    def forward(self, logits, targets):
+        """
+        Args:
+            logits: Model output (B, C, H, W) - raw scores before softmax
+            targets: Ground truth (B, H, W) - class indices
+
+        Returns:
+            Dice loss (scalar)
+        """
+        # Apply softmax to get probabilities
+        probs = torch.softmax(logits, dim=1)  # (B, C, H, W)
+
+        num_classes = probs.shape[1]
+
+        # One-hot encode targets: (B, H, W) -> (B, C, H, W)
+        targets_one_hot = torch.zeros_like(probs)
+        targets_one_hot.scatter_(1, targets.unsqueeze(1), 1)
+
+        # Determine which classes to compute loss for
+        if self.apply_to_classes is not None:
+            class_indices = self.apply_to_classes
+        else:
+            class_indices = range(num_classes)
+
+        dice_loss = 0.0
+        num_classes_used = 0
+
+        for c in class_indices:
+            # Get predictions and targets for class c
+            pred_c = probs[:, c, :, :]  # (B, H, W)
+            target_c = targets_one_hot[:, c, :, :]  # (B, H, W)
+
+            # Flatten spatial dimensions
+            pred_c = pred_c.reshape(pred_c.shape[0], -1)  # (B, H*W)
+            target_c = target_c.reshape(target_c.shape[0], -1)  # (B, H*W)
+
+            # Compute Dice coefficient
+            intersection = (pred_c * target_c).sum(dim=1)  # (B,)
+            union = pred_c.sum(dim=1) + target_c.sum(dim=1)  # (B,)
+
+            dice_coeff = (2.0 * intersection + self.smooth) / (union + self.smooth)
+            dice_loss += (1.0 - dice_coeff).mean()
+            num_classes_used += 1
+
+        # Average over classes
+        return dice_loss / num_classes_used
+
+"""class DiceLoss(nn.Module):
     def __init__(self, num_classes=4, smooth=1e-6):
         super().__init__()
         self.num_classes = num_classes
@@ -48,7 +111,7 @@ class DiceLoss(nn.Module):
 
         dice = (2 * intersection + self.smooth) / (union + self.smooth)
 
-        return 1 - dice.mean()
+        return 1 - dice.mean()"""
 
 
 def dice_per_class(pred, target, num_classes=4):
@@ -129,7 +192,7 @@ class ModelTester:
 
         self.model = model.to(self.device)
 
-        self.model.load_state_dict(save_dict["model_state_dict"], map_location=self.device)
+        self.model.load_state_dict(save_dict["model_state_dict"])
         self.model.eval()
 
         self.dataset = dataset
@@ -183,7 +246,7 @@ class ModelTester:
         with torch.no_grad():
             
             for batch_idx, (inputs, targets) in enumerate(
-                tqdm(self.train_loader, desc=f"Test")
+                tqdm(self.loader, desc=f"Test")
             ):
             #for step, (images, masks) in enumerate(self.loader):
 
@@ -339,7 +402,7 @@ def submit_slurm_testing(
             file_names,
             seed
         )
-    else: #default
+    else: #default 256
         dataset = TestS2TIFDataSet(
             file_names,
             seed

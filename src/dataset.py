@@ -27,21 +27,34 @@ class TestS2TIFDataSet(torch.utils.data.Dataset):
     def __len__(self):
         return len(self.img_paths)
 
-    def __getitem__(self):
+    def __getitem__(self, idx):
         img = tifffile.imread(self.img_paths[idx])
 
         X = TF.to_tensor(img)
 
         X = v2.RandomCrop(size=self.crop_size)(X)
 
+        # last band (band 15) is gt
+        y = X[14, ...]
+
         X = self.toFloat32Transform(X)
 
         X = X[1:13, ...]
 
-        # last band (band 15) is gt
-        y = X[14, ...]
+        # try normalizing to refl values
+        # Assuming X shape is (C, H, W)
+        # amin/amax handle multiple dims and don't return indices (no .values needed)
+        #min_val = torch.amin(X, dim=(1, 2), keepdim=True)
+        #max_val = torch.amax(X, dim=(1, 2), keepdim=True)
 
-        return X, y 
+        # Normalize with epsilon to prevent division by zero
+        #eps = 1e-8
+        #x_normalized = (X - min_val) / (max_val - min_val + eps)
+        
+        X = X
+        y = y.long()
+        
+        return X, y
 
 
 
@@ -64,21 +77,21 @@ class TestS2TIFDataSet512(torch.utils.data.Dataset):
     def __len__(self):
         return len(self.img_paths)
 
-    def __getitem__(self):
+    def __getitem__(self, idx):
         img = tifffile.imread(self.img_paths[idx])
 
         X = TF.to_tensor(img)
 
         X = v2.Pad([0,0,3,3], padding_mode="reflect")(X)
 
+        # last band (band 15) is gt
+        y = X[14, ...]
+
         X = self.toFloat32Transform(X)
 
         X = X[1:13, ...]
 
-        # last band (band 15) is gt
-        y = X[14, ...].long()
-
-        return X, y 
+        return X, y.long() 
 
     
 
@@ -97,7 +110,7 @@ class S2TIFDataSet(torch.utils.data.Dataset):
                 data_root,
                 transparency_threshold:float = 0.05,
                 seed:int|None=42, 
-                randomness:float = 0.01,
+                randomness:float = 0.0,
                 omitt_band_idxs:list[int] = [], # default omitt 10?
                 crop_size:int=256,
                 thick_cloud_percent: float = 0.7,
@@ -271,7 +284,7 @@ class S2TIFDataSet512(torch.utils.data.Dataset):
                 data_root,
                 transparency_threshold:float = 0.05,
                 seed:int|None=42, 
-                randomness:float = 0.01,
+                randomness:float = 0.0,
                 omitt_band_idxs:list[int] = [], # default omitt 10?
                 crop_size:int=512,
                 thick_cloud_percent: float = 0.7,
