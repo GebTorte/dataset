@@ -11,9 +11,8 @@ from SatelliteCloudGenerator.src.CloudSimulator import add_cloud_and_shadow
 
 class TestS2TIFDataSet(torch.utils.data.Dataset):
     # test dataset whihc loads cloudSEN12 GT masks (high)
-    def __init__(self, img_paths, data_root, seed:int=42):
+    def __init__(self, img_paths, seed:int=42):
         self.img_paths = img_paths
-        self.data_root = data_root
         self.seed = seed
         self.crop_size=256
 
@@ -49,9 +48,8 @@ class TestS2TIFDataSet(torch.utils.data.Dataset):
 
 class TestS2TIFDataSet512(torch.utils.data.Dataset):
     # test dataset whihc loads cloudSEN12 GT masks (high)
-    def __init__(self, img_paths, data_root, seed:int=42):
+    def __init__(self, img_paths, seed:int=42):
         self.img_paths = img_paths
-        self.data_root = data_root
         self.seed = seed
         self.crop_size=256
 
@@ -250,7 +248,6 @@ class S2TIFDataSet(torch.utils.data.Dataset):
         # TODO add to other datasets
         # converting ranking-labels to cloudsen12-labels
         mapping = torch.tensor([0,3,2,1], device=X.device)
-
         y = mapping[y.squeeze().long()]
 
         # cl has to be (C, H, W)
@@ -423,10 +420,8 @@ class S2TIFDataSet512(torch.utils.data.Dataset):
             dim=0
         )[0]
         
-        # TODO add to other datasets
         # converting ranking-labels to cloudsen12-labels
         mapping = torch.tensor([0,3,2,1], device=X.device)
-
         y = mapping[y.squeeze().long()]
 
         # cl has to be (C, H, W)
