@@ -490,8 +490,8 @@ class LWFUNetASPPTrainer:
         logger.info("Validation samples: %d", len(val_names))
 
         # Create datasets and dataloaders
-        train_dataset = S2TIFDataSet512(train_names, self.data_root, seed=self.seed)
-        val_dataset = S2TIFDataSet512(val_names, self.data_root, seed=self.seed)
+        train_dataset = S2TIFDataSet(train_names, self.data_root, seed=self.seed)
+        val_dataset = S2TIFDataSet(val_names, self.data_root, seed=self.seed)
 
         self.train_loader = DataLoader(
             train_dataset,

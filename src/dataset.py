@@ -250,8 +250,7 @@ class S2TIFDataSet(torch.utils.data.Dataset):
 
         # convert shadow masks
         #smask = torch.max(torch.clip(torch.add(smask, smask_thin), min=0, max=1), dim=1).values
-        max_shadow = torch.max(smask, smask_thin)[0]
-        #max_shadow = torch.clamp(smask, smask_thin, 0, 1).max(dim=1)[0]
+        max_shadow = torch.clamp(smask + smask_thin, 0, 1).max(dim=1)[0]
         binary_mask_shadow = (max_shadow > self.shadow_max_lvl[0]).long()
 
         # if non-exclusive masks create gt mask like this
@@ -433,8 +432,7 @@ class S2TIFDataSet512(torch.utils.data.Dataset):
 
         # convert shadow masks
         #smask = torch.max(torch.clip(torch.add(smask, smask_thin), min=0, max=1), dim=1).values
-        max_shadow = torch.max(smask, smask_thin)[0]
-        #max_shadow = torch.clamp(smask, smask_thin, 0, 1).max(dim=1)[0]
+        max_shadow = torch.clamp(smask + smask_thin, 0, 1).max(dim=1)[0]
         binary_mask_shadow = (max_shadow > self.shadow_max_lvl[0]).long()
 
         # if non-exclusive masks create gt mask like this
