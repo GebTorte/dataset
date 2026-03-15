@@ -28,16 +28,17 @@ class TestS2TIFDataSet(torch.utils.data.Dataset):
         return len(self.img_paths)
 
     def __getitem__(self, idx):
-        img = tifffile.imread(self.img_paths[idx])
-
-        X = TF.to_tensor(img) # .to(torch.float32)
+        img = tifffile.imread(self.img_paths[idx]).transpose(2,0,1)/10_000
+        
+        X = img
+        X = torch.FloatTensor(X)
 
         X = v2.RandomCrop(size=self.crop_size)(X)
 
         # last band (band 15) is gt
         y = X[14, ...]
 
-        X = self.toFloat32Transform(X)
+        #X = self.toFloat32Transform(X)
 
         X = X[1:13, ...]
 
@@ -78,16 +79,17 @@ class TestS2TIFDataSet512(torch.utils.data.Dataset):
         return len(self.img_paths)
 
     def __getitem__(self, idx):
-        img = tifffile.imread(self.img_paths[idx])
-
-        X = TF.to_tensor(img)
+        img = tifffile.imread(self.img_paths[idx]).transpose(2,0,1)/10_000
+        
+        X = img
+        X = torch.FloatTensor(X)
 
         X = v2.Pad([0,0,3,3], padding_mode="reflect")(X)
 
         # last band (band 15) is gt
         y = X[14, ...]
 
-        X = self.toFloat32Transform(X)
+        #X = self.toFloat32Transform(X)
 
         X = X[1:13, ...]
 
@@ -108,7 +110,7 @@ class S2TIFDataSet(torch.utils.data.Dataset):
     def __init__(self,
                 img_paths,
                 data_root,
-                min_lvl:tuple[float, float] = (0.0, 0.5),
+                min_lvl:tuple[float, float] = (0.0, 0.3),
                 thin_lvl:tuple[float, float] = (0.4, 0.6),
                 shadow_max_lvl:list[float]= [0.3,0.6],
                 seed:int|None=42, 
@@ -175,11 +177,10 @@ class S2TIFDataSet(torch.utils.data.Dataset):
 
         idx: int = index of the tensor to load
         """
-        img = tifffile.imread(self.img_paths[idx])
-
-        X = TF.to_tensor(img)
-
-        X = self.toFloat32Transform(X)
+        img = tifffile.imread(self.img_paths[idx]).transpose(2,0,1)/10_000
+        
+        X = img
+        X = torch.FloatTensor(X)
 
         X = self.transform_rc(X)
 
@@ -325,7 +326,7 @@ class S2TIFDataSet512(torch.utils.data.Dataset):
 
         self.transforms = v2.Compose([
             v2.Pad([0,0,3,3], padding_mode="reflect"), # pad 509px to 512px
-            v2.ToDtype(torch.float32, scale=True),
+            #v2.ToDtype(torch.float32, scale=True),
         ])
 
         self.augment = v2.Compose([
@@ -354,15 +355,16 @@ class S2TIFDataSet512(torch.utils.data.Dataset):
 
         idx: int = index of the tensor to load
         """
-        img = tifffile.imread(self.img_paths[idx])
-
-        X = TF.to_tensor(img)
+        img = tifffile.imread(self.img_paths[idx]).transpose(2,0,1)/10_000
+        
+        X = img
+        X = torch.FloatTensor(X)
 
         X = self.transforms(X)
 
         X = self.augment(X)
 
-        X = self.toFloat32Transform(X)
+        #X = self.toFloat32Transform(X)
 
 
         # TODO: replace add_cloud_and_shadow... with CloudGenerator?
