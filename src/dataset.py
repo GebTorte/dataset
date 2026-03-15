@@ -28,7 +28,7 @@ class TestS2TIFDataSet(torch.utils.data.Dataset):
         return len(self.img_paths)
 
     def __getitem__(self, idx):
-        img = tifffile.imread(self.img_paths[idx]).transpose(2,0,1)/10_000
+        img = tifffile.imread(self.img_paths[idx]).transpose(2,0,1)
         
         X = img
         X = torch.FloatTensor(X)
@@ -40,7 +40,7 @@ class TestS2TIFDataSet(torch.utils.data.Dataset):
 
         #X = self.toFloat32Transform(X)
 
-        X = X[1:13, ...]
+        X = X[1:13, ...]/10_000
 
         # try normalizing to refl values
         # Assuming X shape is (C, H, W)
@@ -79,7 +79,7 @@ class TestS2TIFDataSet512(torch.utils.data.Dataset):
         return len(self.img_paths)
 
     def __getitem__(self, idx):
-        img = tifffile.imread(self.img_paths[idx]).transpose(2,0,1)/10_000
+        img = tifffile.imread(self.img_paths[idx]).transpose(2,0,1)
         
         X = img
         X = torch.FloatTensor(X)
@@ -91,7 +91,7 @@ class TestS2TIFDataSet512(torch.utils.data.Dataset):
 
         #X = self.toFloat32Transform(X)
 
-        X = X[1:13, ...]
+        X = X[1:13, ...]/10_000
 
         return X, y.long() 
 
