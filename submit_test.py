@@ -91,29 +91,6 @@ class DiceLoss(nn.Module):
         # Average over classes
         return dice_loss / num_classes_used
 
-"""class DiceLoss(nn.Module):
-    def __init__(self, num_classes=4, smooth=1e-6):
-        super().__init__()
-        self.num_classes = num_classes
-        self.smooth = smooth
-
-    def forward(self, logits, targets):
-
-        probs = torch.softmax(logits, dim=1)
-
-        targets_onehot = F.one_hot(targets, self.num_classes)
-        targets_onehot = targets_onehot.float() # targets_onehot.permute(0,3,1,2).float()
-
-        dims = (0,2,3)
-
-        intersection = torch.sum(probs * targets_onehot, dims)
-        union = torch.sum(probs + targets_onehot, dims)
-
-        dice = (2 * intersection + self.smooth) / (union + self.smooth)
-
-        return 1 - dice.mean()"""
-
-
 def dice_per_class(pred, target, num_classes=4):
 
     dice_scores = []
