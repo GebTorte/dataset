@@ -30,7 +30,7 @@ class TestS2TIFDataSet(torch.utils.data.Dataset):
     def __getitem__(self, idx):
         img = tifffile.imread(self.img_paths[idx])
 
-        X = TF.to_tensor(img)
+        X = TF.to_tensor(img) # .to(torch.float32)
 
         X = v2.RandomCrop(size=self.crop_size)(X)
 
@@ -108,7 +108,9 @@ class S2TIFDataSet(torch.utils.data.Dataset):
     def __init__(self,
                 img_paths,
                 data_root,
-                transparency_threshold:float = 0.05,
+                min_lvl:tuple[float, float] = (0.0, 0.5),
+                thin_lvl:tuple[float, float] = (0.4, 0.6),
+                shadow_max_lvl:list[float]= [0.3,0.6],
                 seed:int|None=42, 
                 randomness:float = 0.0,
                 omitt_band_idxs:list[int] = [], # default omitt 10?
@@ -127,7 +129,9 @@ class S2TIFDataSet(torch.utils.data.Dataset):
         self.omitt_band_idxs = omitt_band_idxs # excluding cirrus by default
         self.crop_size = crop_size
         self.randomness = randomness
-        self.transparency_threshold = transparency_threshold
+        self.min_lvl = min_lvl
+        self.thin_lvl = thin_lvl
+        self.shadow_max_lvl = shadow_max_lvl
         self.thick_cloud_percent = thick_cloud_percent
         self.thin_cloud_percent = thin_cloud_percent
         self.locality_degree = locality_degree
@@ -200,6 +204,7 @@ class S2TIFDataSet(torch.utils.data.Dataset):
         # if torch.rand(1).item() < 1: # always go here # deprecate: self.thick_cloud_percent:
         cl1, cmask, smask = add_cloud_and_shadow(X,
             return_cloud=True,
+            min_lvl=self.min_lvl,
             channel_magnitude=stat_mag_scaler(
                 X,
                 omitt_band_idxs=self.omitt_band_idxs, 
@@ -207,6 +212,7 @@ class S2TIFDataSet(torch.utils.data.Dataset):
                 randomness=self.randomness
             ),
             cloud_color=True,
+            shadow_max_lvl=self.shadow_max_lvl,
             locality_degree=locality1,
         )
         if torch.rand(1).item() < self.thin_cloud_percent:
@@ -218,10 +224,11 @@ class S2TIFDataSet(torch.utils.data.Dataset):
                     seed=self.seed, 
                     randomness=self.randomness
                 ),
-                min_lvl=0.4,
-                max_lvl=0.6,
+                min_lvl=self.thin_lvl[0],
+                max_lvl=self.thin_lvl[1],
                 decay_factor=1.5,
                 cloud_color=True,
+                shadow_max_lvl=self.shadow_max_lvl,
                 locality_degree=1,
             )
 
@@ -236,15 +243,16 @@ class S2TIFDataSet(torch.utils.data.Dataset):
         # Max across channels
         # < min_lvl from CloudSimulator
         max_cloud = torch.max(cmask, dim=1)[0]
-        binary_mask_cloud = (max_cloud > self.transparency_threshold).long()
+        binary_mask_cloud = (max_cloud > self.min_lvl[-1]).long()
 
         max_cloud_thin = torch.max(cmask_thin, dim=1)[0]
-        binary_mask_cloud_thin = (max_cloud_thin > self.transparency_threshold).long()
+        binary_mask_cloud_thin = (max_cloud_thin > self.thin_lvl[0]).long()
 
         # convert shadow masks
         #smask = torch.max(torch.clip(torch.add(smask, smask_thin), min=0, max=1), dim=1).values
-        max_shadow = torch.clamp(smask+smask_thin, 0, 1).max(dim=1)[0]
-        binary_mask_shadow = (max_shadow > self.transparency_threshold).long()
+        max_shadow = torch.max(smask, smask_thin)[0]
+        #max_shadow = torch.clamp(smask, smask_thin, 0, 1).max(dim=1)[0]
+        binary_mask_shadow = (max_shadow > self.shadow_max_lvl[0]).long()
 
         # if non-exclusive masks create gt mask like this
         # because we work with quasi-refelctance and not probabilities
@@ -282,7 +290,9 @@ class S2TIFDataSet512(torch.utils.data.Dataset):
     def __init__(self,
                 img_paths,
                 data_root,
-                transparency_threshold:float = 0.05,
+                min_lvl:tuple[float, float] = (0.0, 0.3),
+                thin_lvl:tuple[float, float] = (0.4, 0.6),
+                shadow_max_lvl:list[float]= [0.3,0.6],
                 seed:int|None=42, 
                 randomness:float = 0.0,
                 omitt_band_idxs:list[int] = [], # default omitt 10?
@@ -300,8 +310,10 @@ class S2TIFDataSet512(torch.utils.data.Dataset):
         self.seed = seed
         self.omitt_band_idxs = omitt_band_idxs # excluding cirrus by default
         self.crop_size = crop_size
-        self.randomness = randomness
-        self.transparency_threshold = transparency_threshold
+        self.randomness = randomness        
+        self.min_lvl = min_lvl
+        self.thin_lvl = thin_lvl
+        self.shadow_max_lvl = shadow_max_lvl
         self.thick_cloud_percent = thick_cloud_percent
         self.thin_cloud_percent = thin_cloud_percent
         self.locality_degree = locality_degree
@@ -375,6 +387,7 @@ class S2TIFDataSet512(torch.utils.data.Dataset):
         # if torch.rand(1).item() < 1: # always go here # deprecate: self.thick_cloud_percent:
         cl1, cmask, smask = add_cloud_and_shadow(X,
             return_cloud=True,
+            min_lvl=self.min_lvl,
             channel_magnitude=stat_mag_scaler(
                 X,
                 omitt_band_idxs=self.omitt_band_idxs, 
@@ -382,6 +395,7 @@ class S2TIFDataSet512(torch.utils.data.Dataset):
                 randomness=self.randomness
             ),
             cloud_color=True,
+            shadow_max_lvl=self.shadow_max_lvl,
             locality_degree=locality1,
         )
         if torch.rand(1).item() < self.thin_cloud_percent:
@@ -393,10 +407,11 @@ class S2TIFDataSet512(torch.utils.data.Dataset):
                     seed=self.seed, 
                     randomness=self.randomness
                 ),
-                min_lvl=0.4,
-                max_lvl=0.6,
+                min_lvl=self.thin_lvl[0],
+                max_lvl=self.thin_lvl[1],
                 decay_factor=1.5,
                 cloud_color=True,
+                shadow_max_lvl=self.shadow_max_lvl,
                 locality_degree=1,
             )
 
@@ -411,15 +426,16 @@ class S2TIFDataSet512(torch.utils.data.Dataset):
         # Max across channels
         # < min_lvl from CloudSimulator
         max_cloud = torch.max(cmask, dim=1)[0]
-        binary_mask_cloud = (max_cloud > self.transparency_threshold).long()
+        binary_mask_cloud = (max_cloud > self.min_lvl[-1]).long()
 
         max_cloud_thin = torch.max(cmask_thin, dim=1)[0]
-        binary_mask_cloud_thin = (max_cloud_thin > self.transparency_threshold).long()
+        binary_mask_cloud_thin = (max_cloud_thin > self.thin_lvl[0]).long()
 
         # convert shadow masks
         #smask = torch.max(torch.clip(torch.add(smask, smask_thin), min=0, max=1), dim=1).values
-        max_shadow = torch.clamp(smask+smask_thin, 0, 1).max(dim=1)[0]
-        binary_mask_shadow = (max_shadow > self.transparency_threshold).long()
+        max_shadow = torch.max(smask, smask_thin)[0]
+        #max_shadow = torch.clamp(smask, smask_thin, 0, 1).max(dim=1)[0]
+        binary_mask_shadow = (max_shadow > self.shadow_max_lvl[0]).long()
 
         # if non-exclusive masks create gt mask like this
         # because we work with quasi-refelctance and not probabilities
@@ -445,6 +461,8 @@ class S2TIFDataSet512(torch.utils.data.Dataset):
 
 class S2TIFDataSet_256_4x(torch.utils.data.Dataset):
     """
+    deprecated
+
     Load s2 patches
     - maybe add selector for cloudfree here?
     - generate GT cloud mask here

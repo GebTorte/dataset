@@ -358,7 +358,7 @@ class LWFUNetASPPTrainer:
         csv_name : str, optional
             Name of CSV file with NPZ paths (default: "full_set_file.csv").
         num_classes : int, optional
-            Number of output classes (default: 3).
+            Number of output classes (default: 4).
         in_channels : int, optional
             Number of input channels (default: 1).
         base_channels : int, optional
