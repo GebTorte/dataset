@@ -110,15 +110,16 @@ class S2TIFDataSet(torch.utils.data.Dataset):
     def __init__(self,
                 img_paths,
                 data_root,
-                min_lvl:tuple[float, float] = (0.0, 0.3),
+                transparency_cutoff:float = 0.1,
+                min_lvl:tuple[float, float] = (0.0, 0.0),
                 thin_lvl:tuple[float, float] = (0.4, 0.6),
                 shadow_max_lvl:list[float]= [0.3,0.6],
                 seed:int|None=42, 
                 randomness:float = 0.0,
                 omitt_band_idxs:list[int] = [], # default omitt 10?
                 crop_size:int=256,
-                thick_cloud_percent: float = 0.7,
-                thin_cloud_percent: float = 0.3,
+                thick_cloud_percent: float = 0.8,
+                thin_cloud_percent: float = 0.4,
                 locality_degree: tuple[int, int] = (1,4),
         ):
         """
@@ -137,6 +138,7 @@ class S2TIFDataSet(torch.utils.data.Dataset):
         self.thick_cloud_percent = thick_cloud_percent
         self.thin_cloud_percent = thin_cloud_percent
         self.locality_degree = locality_degree
+        self.transparency_cutoff = transparency_cutoff
 
         # set torch random seed for random transform ops
         if self.seed:
@@ -204,6 +206,7 @@ class S2TIFDataSet(torch.utils.data.Dataset):
 
         # if torch.rand(1).item() < 1: # always go here # deprecate: self.thick_cloud_percent:
         cl1, cmask, smask = add_cloud_and_shadow(X,
+            clear_threshold=self.transparency_cutoff,
             return_cloud=True,
             min_lvl=self.min_lvl,
             channel_magnitude=stat_mag_scaler(
@@ -218,6 +221,7 @@ class S2TIFDataSet(torch.utils.data.Dataset):
         )
         if torch.rand(1).item() < self.thin_cloud_percent:
             cl2, cmask_thin, smask_thin = add_cloud_and_shadow(cl1,
+                clear_threshold=self.transparency_cutoff,
                 return_cloud=True,
                 channel_magnitude=stat_mag_scaler(
                     cl1,

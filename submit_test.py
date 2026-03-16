@@ -136,7 +136,7 @@ class ModelTester:
         model,
         dataset,
         batch_size=12,
-        num_workers=8,
+        num_workers=16,
         device="cuda",
         user:str = "di54xat",
         repo:str = "cloudsen12",
