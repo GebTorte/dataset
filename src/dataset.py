@@ -110,16 +110,16 @@ class S2TIFDataSet(torch.utils.data.Dataset):
     def __init__(self,
                 img_paths,
                 data_root,
-                transparency_cutoff:float = 0.1,
-                min_lvl:tuple[float, float] = (0.0, 0.0),
+                transparency_cutoff:float = 0.05,
+                min_lvl:tuple[float, float] = (0.0, 0.05),
                 thin_lvl:tuple[float, float] = (0.4, 0.6),
                 shadow_max_lvl:list[float]= [0.3,0.6],
                 seed:int|None=42, 
                 randomness:float = 0.0,
                 omitt_band_idxs:list[int] = [], # default omitt 10?
                 crop_size:int=256,
-                thick_cloud_percent: float = 0.8,
-                thin_cloud_percent: float = 0.4,
+                thick_cloud_percent: float = 0.9,
+                thin_cloud_percent: float = 0.5,
                 locality_degree: tuple[int, int] = (1,4),
         ):
         """

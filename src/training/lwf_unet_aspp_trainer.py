@@ -30,16 +30,16 @@ class DoubleConv(nn.Module):
         use_residual: Whether to add residual connection (default: True)
     """
 
-    def __init__(self, in_channels, out_channels, use_residual=True):
+    def __init__(self, in_channels, out_channels, use_residual=True, bn_momentum:float=0.98):
         super().__init__()
         self.use_residual = use_residual
 
         self.block = nn.Sequential(
             nn.Conv2d(in_channels, out_channels, kernel_size=3, padding=1, bias=False),
-            nn.BatchNorm2d(out_channels),
+            nn.BatchNorm2d(out_channels, momentum=bn_momentum),
             nn.ReLU(inplace=True),
             nn.Conv2d(out_channels, out_channels, kernel_size=3, padding=1, bias=False),
-            nn.BatchNorm2d(out_channels),
+            nn.BatchNorm2d(out_channels, momentum=bn_momentum),
             nn.ReLU(inplace=True),
         )
 
@@ -75,13 +75,13 @@ class ASPP(nn.Module):
         rates: List of dilation rates for atrous convolutions
     """
 
-    def __init__(self, in_channels, out_channels, rates=(3, 6, 9, 12)):
+    def __init__(self, in_channels, out_channels, rates=(3, 6, 9, 12), bn_momentum:float=0.98):
         super().__init__()
 
         # 1×1 convolution (captures point-wise features)
         self.conv1x1 = nn.Sequential(
             nn.Conv2d(in_channels, out_channels, kernel_size=1, bias=False),
-            nn.BatchNorm2d(out_channels),
+            nn.BatchNorm2d(out_channels, momentum=bn_momentum),
             nn.ReLU(inplace=True),
         )
 
@@ -98,7 +98,7 @@ class ASPP(nn.Module):
                         dilation=rate,
                         bias=False,
                     ),
-                    nn.BatchNorm2d(out_channels),
+                    nn.BatchNorm2d(out_channels, momentum=bn_momentum),
                     nn.ReLU(inplace=True),
                 )
             )
@@ -107,7 +107,7 @@ class ASPP(nn.Module):
         self.global_pool = nn.Sequential(
             nn.AdaptiveAvgPool2d(1),
             nn.Conv2d(in_channels, out_channels, kernel_size=1, bias=False),
-            nn.BatchNorm2d(out_channels),
+            nn.BatchNorm2d(out_channels, momentum=bn_momentum),
             nn.ReLU(inplace=True),
         )
 
@@ -116,7 +116,7 @@ class ASPP(nn.Module):
         total_channels = (1 + len(rates) + 1) * out_channels
         self.project = nn.Sequential(
             nn.Conv2d(total_channels, out_channels, kernel_size=1, bias=False),
-            nn.BatchNorm2d(out_channels),
+            nn.BatchNorm2d(out_channels, momentum=bn_momentum),
             nn.ReLU(inplace=True),
         )
 
@@ -164,18 +164,19 @@ class UNet(nn.Module):
         use_residual=True,
         use_aspp=True,
         aspp_rates=(3, 6, 9, 12),
+        bn_momentum=0.1,
     ):
         super().__init__()
         self.use_aspp = use_aspp
 
         # ENCODER
-        self.enc1 = DoubleConv(in_channels, base_channels, use_residual)  # 32
-        self.enc2 = DoubleConv(base_channels, base_channels * 2, use_residual)  # 64
+        self.enc1 = DoubleConv(in_channels, base_channels, use_residual, bn_momentum=bn_momentum,)  # 32
+        self.enc2 = DoubleConv(base_channels, base_channels * 2, use_residual, bn_momentum=bn_momentum,)  # 64
         self.enc3 = DoubleConv(
-            base_channels * 2, base_channels * 4, use_residual
+            base_channels * 2, base_channels * 4, use_residual, bn_momentum=bn_momentum,
         )  # 128
         self.enc4 = DoubleConv(
-            base_channels * 4, base_channels * 8, use_residual
+            base_channels * 4, base_channels * 8, use_residual, bn_momentum=bn_momentum,
         )  # 256
 
         self.pool = nn.MaxPool2d(2)  # Downsampling by 2
@@ -187,33 +188,34 @@ class UNet(nn.Module):
                 base_channels * 8,
                 base_channels * 16,
                 rates=aspp_rates,
+                bn_momentum=bn_momentum,
             )
         else:
             # Standard bottleneck
             self.bottleneck = DoubleConv(
-                base_channels * 8, base_channels * 16, use_residual
+                base_channels * 8, base_channels * 16, use_residual, bn_momentum=bn_momentum,
             )
 
         # DECODER
         self.up4 = nn.ConvTranspose2d(
             base_channels * 16, base_channels * 8, kernel_size=2, stride=2
         )
-        self.dec4 = DoubleConv(base_channels * 16, base_channels * 8, use_residual)
+        self.dec4 = DoubleConv(base_channels * 16, base_channels * 8, use_residual, bn_momentum=bn_momentum,)
 
         self.up3 = nn.ConvTranspose2d(
             base_channels * 8, base_channels * 4, kernel_size=2, stride=2
         )
-        self.dec3 = DoubleConv(base_channels * 8, base_channels * 4, use_residual)
+        self.dec3 = DoubleConv(base_channels * 8, base_channels * 4, use_residual, bn_momentum=bn_momentum,)
 
         self.up2 = nn.ConvTranspose2d(
             base_channels * 4, base_channels * 2, kernel_size=2, stride=2
         )
-        self.dec2 = DoubleConv(base_channels * 4, base_channels * 2, use_residual)
+        self.dec2 = DoubleConv(base_channels * 4, base_channels * 2, use_residual, bn_momentum=bn_momentum,)
 
         self.up1 = nn.ConvTranspose2d(
             base_channels * 2, base_channels, kernel_size=2, stride=2
         )
-        self.dec1 = DoubleConv(base_channels * 2, base_channels, use_residual)
+        self.dec1 = DoubleConv(base_channels * 2, base_channels, use_residual, bn_momentum=bn_momentum,)
 
         # FINAL LAYER: 1×1 convolution to get class scores
         self.out = nn.Conv2d(base_channels, num_classes, kernel_size=1)
@@ -247,6 +249,7 @@ class UNet(nn.Module):
 
         # Final output
         return self.out(dec1)  # 1024×1024×3
+
 
 
 class DiceLoss(nn.Module):
@@ -326,9 +329,9 @@ class LWFUNetASPPTrainer:
         in_channels: int = 12,
         base_channels: int = 32,
         epochs: int = 32,
-        batch_size: int = 12,
+        batch_size: int = 32,
         lr: float = 0.001,
-        weight_decay: float = 0.0001,
+        weight_decay: float = 1e-3,
         num_workers: int = 16,
         prefetch_factor: int = 8,
         val_split: float = 0.2,
@@ -876,3 +879,4 @@ class LWFUNetASPPTrainer:
         self.setup()
         self.train()
         return str(self.checkpoint_dir / "final_model.pth")
+
