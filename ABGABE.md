@@ -43,7 +43,8 @@ Provide at least loss curves for the trainings, for train and val. If you want t
 
 ### Problem description
 
-Cloud detection in multispectral satellite imagery is a base problem in the literature. 
+Cloud detection in multispectral satellite imagery is a base problem in the literature. There are establised algos(Sen2Cor, FMask, etc.) working on physical and geometric properties of clouds and their effect measured at the sensor with high accuracies. A downside is their high computational cost compared to inference on GPU. Another argument is their asymptotical limit in accuracy. Deep Learning poses a promising method to mitigate both issues, as ....
+
 
 ### Implementation
 
@@ -51,16 +52,18 @@ Cloud detection in multispectral satellite imagery is a base problem in the lite
  1. SatelliteCloudGenerator on scribble
  2. validation via cloudsen12 high
 
-#### HPO
+#### Hyperparameter-Optimisation HPO
 Because the task is not a trivial one and first trainings on default-like parameters showed sub-par results, hyperparameter-optimization was considered. It was implemented using the optuna framework.
 To be compatible with SLURM, a existing *Trainer class as extended with the `setup` method, which is called by optuna, to setup a study. Then, in the `__call__` method, a study is created and passed on to be executed as a SLURM job.
 
 ### Experiments
 HPO was run with following parameters. The weights for classes were arbitrarily chosen, but on the grounds that `thin` and `shadow` appear less than `thick` who appear less than `clear`. This information was gained by analysing the unbalanced results of dice losses from previous, smaller experiments and based on the probabilities used in the synthetical data generation.
 ```bash 
-python3 submit_hpo.py --user di54xat --n-trials 100 --epochs 5 --experiment-id hpo_006_cs12val_nt100-weights1244_epochs5 --aspp --class-weights 1.0 2.0 4.0 4.0 --use-cloudsen12-validation
+python3 submit_hpo.py --user my54user --n-trials 100 --epochs 5 --experiment-id hpo_006_cs12val_nt100-weights1244_epochs5 --aspp --class-weights 1.0 2.0 4.0 4.0 --use-cloudsen12-validation
 ```
 
 ### Training
 
 ### Results & Discussion
+- class weights could be determined based on synth data and seed
+- verification of synth cloud masks should be ok, but should a 1-0.05 transparency cloud be considered as (thick) cloud? How is it in cloudsen12?
