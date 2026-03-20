@@ -470,8 +470,8 @@ class LWFUNetASPPOptunaCS12Val:
         logger.info("Using device: %s", self.device)
 
         pruner = optuna.pruners.MedianPruner()
-        study = optuna.create_study(direction="minimize")
-        study.optimize(self.objective, n_trials=self.n_trials, n_jobs=self.n_gpus, pruner=pruner)
+        study = optuna.create_study(direction="minimize", pruner=pruner)
+        study.optimize(self.objective, n_trials=self.n_trials, n_jobs=self.n_gpus)
         
         logger.info("Best params: %s", study.best_params)
 
