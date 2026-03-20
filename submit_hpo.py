@@ -15,6 +15,7 @@ import optuna
 #from src.training.lwf_unet_aspp_trainer import LWFUNetASPPTrainer
 
 from src.tuning.optuna_hpo import LWFUNetASPPOptuna
+from src.tuning.optuna_hpo_cs12validate import LWFUNetASPPOptunaCS12Val
 
 logger = logging.getLogger(__name__)
 
@@ -54,6 +55,7 @@ def submit_hpo(
     use_dual_head: bool = False,
     skeleton_class: int = 1,
     skeleton_loss_weight: float = 1.0,
+    cloudsen12_validation: bool = False
 ) -> submitit.Job:
     """
     Submit LWF-DLR U-Net training job to SLURM cluster.
@@ -167,19 +169,34 @@ def submit_hpo(
         ],
     )
 
-    study = LWFUNetASPPOptuna(
-        user=user,
-        seed=seed,
-        csv_name=csv_name,
-        epochs=epochs,
-        batch_size=batch_size,
-        num_workers=num_workers,
-        prefetch_factor=prefetch_factor,
-        experiment_id=experiment_id,
-        n_trials=n_trials,
-        n_gpus=gpus_per_node,
-        class_weights=class_weights,
-    )
+    if cloudsen12_validation:
+        study = LWFUNetASPPOptunaCS12Val(
+            user=user,
+            seed=seed,
+            train_csv_name=csv_name,
+            epochs=epochs,
+            batch_size=batch_size,
+            num_workers=num_workers,
+            prefetch_factor=prefetch_factor,
+            experiment_id=experiment_id,
+            n_trials=n_trials,
+            n_gpus=gpus_per_node,
+            class_weights=class_weights,
+        )
+    else:
+        study = LWFUNetASPPOptuna(
+            user=user,
+            seed=seed,
+            csv_name=csv_name,
+            epochs=epochs,
+            batch_size=batch_size,
+            num_workers=num_workers,
+            prefetch_factor=prefetch_factor,
+            experiment_id=experiment_id,
+            n_trials=n_trials,
+            n_gpus=gpus_per_node,
+            class_weights=class_weights,
+        )
 
     job = executor.submit(study)
 
@@ -398,6 +415,12 @@ def main():  # noqa: D103
         help="Weight for skeleton BCE loss (default: 1.0)",
     )
 
+    parser.add_argument(
+        "--use-cloudsen12-validation",
+        action="store_true",
+        help="whether to use cloudsen12 data as validation during training."
+    )
+
     args = parser.parse_args()
 
     # Configure logging for CLI
@@ -442,6 +465,7 @@ def main():  # noqa: D103
         use_dual_head=args.dual_head,
         skeleton_class=args.skeleton_class,
         skeleton_loss_weight=args.skeleton_loss_weight,
+        cloudsen12_validation=args.use_cloudsen12_validation,
     )
 
     logger.info("Job submitted successfully!")

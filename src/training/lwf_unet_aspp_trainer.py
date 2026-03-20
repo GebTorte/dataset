@@ -330,8 +330,8 @@ class LWFUNetASPPTrainer:
         base_channels: int = 32,
         epochs: int = 32,
         batch_size: int = 32,
-        lr: float = 0.001,
-        weight_decay: float = 1e-3,
+        lr: float = 0.008,
+        weight_decay: float = 4e-3,
         num_workers: int = 16,
         prefetch_factor: int = 8,
         val_split: float = 0.2,
@@ -434,7 +434,7 @@ class LWFUNetASPPTrainer:
 
         # Loss configuration
         self.use_class_weights = use_class_weights
-        self.class_weights = class_weights or [1.0, 15., 10., 5.]
+        self.class_weights = class_weights or [1.0] + [20.] * 3
         self.use_dice_loss = use_dice_loss
         self.dice_loss_weight = dice_loss_weight
         self.dice_loss_smooth = dice_loss_smooth
