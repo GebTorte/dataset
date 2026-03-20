@@ -451,8 +451,9 @@ class LWFUNetASPPOptuna:
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         logger.info("Using device: %s", self.device)
 
+        pruner = optuna.pruners.MedianPruner()
         study = optuna.create_study(direction="minimize")
-        study.optimize(self.objective, n_trials=self.n_trials, n_jobs=self.n_gpus)
+        study.optimize(self.objective, n_trials=self.n_trials, n_jobs=self.n_gpus, pruner=pruner)
         
         #print("Best Hyperparameters:", study.best_params)
         # TODO: log this to file?
