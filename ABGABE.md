@@ -41,7 +41,9 @@ Provide at least loss curves for the trainings, for train and val. If you want t
 
 ### Problem description
 
-Cloud detection in multispectral satellite imagery is a base problem in the literature. There are establised algos(Sen2Cor, FMask, etc.) working on physical and geometric properties of clouds and their effect measured at the sensor with high accuracies. A downside is their high computational cost compared to inference on GPU. Another argument is their asymptotical limit in accuracy. Deep Learning poses a promising method to mitigate both issues, as ....
+Cloud detection in multispectral satellite imagery is a base problem in multispectral remote sensing. There are establised algorithms for cloud detection with high accuracies(Sen2Cor, FMask, etc.). They are functions of physical and geometric properties of clouds, their effect measured at the sensor and more scientific knowledge on clouds. A downside is their high computational cost compared to inference on GPU. Another argument is their asymptotical limit in accuracy. Deep Learning (DL) poses a promising method to mitigate both issues, as firstly matrix multiplication runs fast on modern GPUs and secondly DL has the capabilities of detecting new regression features of bands that could indicate cloud.
+
+Since Deep Learning needs Ground Truth (GT) data to train on, and the cloud masks in this data are mainly calculated by said algorithms, DL is limited by their accuracy and False Positives and Negatives impair the training data further. Therefore my idea is to use synthetically generated clouds and perfect masks on cloudfree images and use these to train a standard UNet on, to see if it performs well. Luckily Mikolaj Czerkawski et al. implemented exactly this cloud generation (https://github.com/strath-ai/SatelliteCloudGenerator). I use their method on cloudfree images of the CloudSEN12 dataset (https://cloudsen12.github.io/) to generate training data.
 
 ### Pipeline overview
 <head>
@@ -55,12 +57,15 @@ Cloud detection in multispectral satellite imagery is a base problem in the lite
 ### Implementation
 
 #### Dataset
+
+
  1. SatelliteCloudGenerator on scribble
  2. validation via cloudsen12 high
 
 #### Hyperparameter-Optimisation HPO
 Because the task is not a trivial one and first trainings on default-like parameters showed sub-par results, hyperparameter-optimization was considered. It was implemented using the optuna framework.
-To be compatible with SLURM, a existing *Trainer class as extended with the `setup` method, which is called by optuna, to setup a study. Then, in the `__call__` method, a study is created and passed on to be executed as a SLURM job.
+//To be compatible with SLURM, a existing *Trainer class as extended with the `setup` method, which is called by optuna, to setup a study. 
+Then, in the `__call__` method, a study is created and passed on to be executed as a SLURM job.
 
 ### Experiments
 HPO was run with following parameters. The weights for classes were arbitrarily chosen, but on the grounds that `thin` and `shadow` appear less than `thick` who appear less than `clear`. This information was gained by analysing the unbalanced results of dice losses from previous, smaller experiments and based on the probabilities used in the synthetical data generation.
