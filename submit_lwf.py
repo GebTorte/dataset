@@ -20,7 +20,7 @@ def submit_lwf_training(
     repo: str = "cloudsen12",
     seed:int = 42,
     csv_name: str = "cloudsen12_initial_cloudfree_high.csv",
-    epochs: int = 16,
+    epochs: int = 32,
     batch_size: int = 12,
     num_workers: int = 16,
     prefetch_factor: int = 8,

@@ -6,6 +6,9 @@ from torch.utils.data import DataLoader, RandomSampler
 
 import optuna
 
+from optuna.visualization import plot_param_importances
+
+
 logger = logging.getLogger(__name__)
 
 
@@ -227,7 +230,7 @@ class LWFUNetASPPOptunaCS12Val:
         )
 
         batch_factor = 5
-        samples_per_epoch = self.batch_size * batch_factor * int(1/(20*batch_factor) * len(val_dataset))
+        samples_per_epoch = self.batch_size * int(1/(20) * len(val_dataset))
         # 'replacement=False' ensures no duplicates within the same epoch
         sampler = RandomSampler(val_dataset, num_samples=samples_per_epoch, replacement=False)
 
@@ -464,7 +467,6 @@ class LWFUNetASPPOptunaCS12Val:
         """
         logger.info("Starting hpo: %s", self.experiment_id)
 
-
         # need to set device on slurm 
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         logger.info("Using device: %s", self.device)
@@ -477,5 +479,8 @@ class LWFUNetASPPOptunaCS12Val:
 
         with open(str(self.experiment_dir / "best_params.log"), "w+") as f:
             f.write(str(study.best_params))
+
+        fig_importance = plot_param_importances(study)
+        fig_importance.write_html(str(self.experiment_dir /"feature_importance.html"))
 
         return str(study.best_params) # str(self.checkpoint_dir / "final_model.pth")

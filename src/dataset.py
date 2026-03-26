@@ -10,7 +10,7 @@ from SatelliteCloudGenerator.src.CloudSimulator import add_cloud_and_shadow
 
 
 class TestS2TIFDataSet(torch.utils.data.Dataset):
-    # test dataset whihc loads cloudSEN12 GT masks (high)
+    """ test dataset which loads cloudSEN12 GT masks (high)"""
     def __init__(self, img_paths, seed:int=42):
         self.img_paths = img_paths
         self.seed = seed
@@ -18,11 +18,6 @@ class TestS2TIFDataSet(torch.utils.data.Dataset):
 
         if self.seed:
             torch.manual_seed(seed) 
-
-        
-        self.toFloat32Transform = v2.Compose([
-            v2.ToDtype(torch.float32, scale=True),
-        ])
 
     def __len__(self):
         return len(self.img_paths)
@@ -38,20 +33,8 @@ class TestS2TIFDataSet(torch.utils.data.Dataset):
         # last band (band 15) is gt
         y = X[14, ...]
 
-        #X = self.toFloat32Transform(X)
-
         X = X[1:13, ...]/10_000
 
-        # try normalizing to refl values
-        # Assuming X shape is (C, H, W)
-        # amin/amax handle multiple dims and don't return indices (no .values needed)
-        #min_val = torch.amin(X, dim=(1, 2), keepdim=True)
-        #max_val = torch.amax(X, dim=(1, 2), keepdim=True)
-
-        # Normalize with epsilon to prevent division by zero
-        #eps = 1e-8
-        #x_normalized = (X - min_val) / (max_val - min_val + eps)
-        
         X = X
         y = y.long()
         
@@ -61,7 +44,7 @@ class TestS2TIFDataSet(torch.utils.data.Dataset):
 
 
 class TestS2TIFDataSet512(torch.utils.data.Dataset):
-    # test dataset whihc loads cloudSEN12 GT masks (high)
+    """ test dataset whihc loads cloudSEN12 GT masks (high)"""
     def __init__(self, img_paths, seed:int=42):
         self.img_paths = img_paths
         self.seed = seed
@@ -69,11 +52,6 @@ class TestS2TIFDataSet512(torch.utils.data.Dataset):
 
         if self.seed:
             torch.manual_seed(seed) 
-
-        
-        self.toFloat32Transform = v2.Compose([
-            v2.ToDtype(torch.float32, scale=True),
-        ])
 
     def __len__(self):
         return len(self.img_paths)
@@ -88,8 +66,6 @@ class TestS2TIFDataSet512(torch.utils.data.Dataset):
 
         # last band (band 15) is gt
         y = X[14, ...]
-
-        #X = self.toFloat32Transform(X)
 
         X = X[1:13, ...]/10_000
 

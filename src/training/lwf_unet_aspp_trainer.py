@@ -317,7 +317,15 @@ class DiceLoss(nn.Module):
 
 
 class LWFUNetASPPTrainer:
-    """Training class for LWF-DLR U-Net with ASPP + Residual + Weighted CE + Dice Loss."""
+    """Training class for LWF-DLR U-Net with ASPP + Residual + Weighted CE + Dice Loss.
+    
+    Results from HPO 1
+    [I 2026-03-21 09:01:32,512] Trial 10 finished with value: 1.5033405125141144 and
+     parameters: {'lr': 2.2432127796186714e-05, 
+     'weight_decay': 0.00984158991210542, 
+     'batch_norm_momentum': 0.9}. Best is trial 10 with value: 1.5033405125141144.
+
+    """
 
     def __init__(
         self,
@@ -330,8 +338,9 @@ class LWFUNetASPPTrainer:
         base_channels: int = 32,
         epochs: int = 32,
         batch_size: int = 32,
-        lr: float = 0.008,
-        weight_decay: float = 4e-3,
+        lr: float = 2.2432127796186714e-05,
+        weight_decay: float = 0.00984158991210542,
+        bn_momentum: float = 0.9,
         num_workers: int = 16,
         prefetch_factor: int = 8,
         val_split: float = 0.2,
@@ -422,6 +431,7 @@ class LWFUNetASPPTrainer:
         self.batch_size = batch_size
         self.lr = lr
         self.weight_decay = weight_decay
+        self.bn_momentum = bn_momentum
         self.num_workers = num_workers
         self.prefetch_factor = prefetch_factor
         self.val_split = val_split
@@ -522,6 +532,7 @@ class LWFUNetASPPTrainer:
             use_residual=self.use_residual,
             use_aspp=self.use_aspp,
             aspp_rates=self.aspp_rates,
+            bn_momentum=self.bn_momentum,
         ).to(self.device)
 
         logger.info(
