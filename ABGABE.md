@@ -75,6 +75,32 @@ python3 submit_hpo.py --user my54user --n-trials 100 --epochs 5 --experiment-id 
 
 ### Training
 
+A model was trained on all cloudfree  `scribble`-type images from CloudSEN12 with the best resulting parameters from the HPO. 
+
+
+
+Testing was done on all `high`-labeled images which were randomly cropped to 256x256. Metrics showed following values:
+
+{
+    "cross_entropy": 1.0892133767084538,
+    "dice_loss": 0.7443273707116537,
+    "pixel_accuracy": 0.6121607009887695,
+    "dice_per_class": [
+        0.5711737136744025,
+        0.41666791491842303,
+        0.002845491940142001,
+        0.11143970084237596
+    ],
+    "mean_dice": 0.27553170534383586,
+    "iou_per_class": [
+        0.48133956820675405,
+        0.3323163145391386,
+        0.002268686277726011,
+        0.07711897630770194
+    ],
+    "mean_iou": 0.22326088633283014
+}
+
 ### Results & Discussion
 - class weights could be determined based on synth data and seed
 - verification of synth cloud masks should be ok, but should a 1-0.05 transparency cloud be considered as (thick) cloud? How is it in cloudsen12?
