@@ -63,9 +63,9 @@ Since Deep Learning needs Ground Truth (GT) data to train on, and the cloud mask
  2. validation via cloudsen12 high
 
 #### Hyperparameter-Optimisation HPO
-Because the task is not a trivial one and first trainings on default-like parameters showed sub-par results, hyperparameter-optimization was considered. It was implemented using the optuna framework.
-//To be compatible with SLURM, a existing *Trainer class as extended with the `setup` method, which is called by optuna, to setup a study. 
-Then, in the `__call__` method, a study is created and passed on to be executed as a SLURM job.
+Because the task is not a trivial one and first trainings on default-like parameters showed sub-par results, hyperparameter-optimization was considered. It was implemented using the optuna library.
+To be compatible with SLURM, a existing *Trainer class as extended with the `objective` method, which is called by optuna, to deliver a objective for optimization. 
+Then, in the `__call__` method, a study is created and later passed on to be executed as a SLURM job.
 
 ### Experiments
 HPO was run with following parameters. The weights for classes were arbitrarily chosen, but on the grounds that `thin` and `shadow` appear less than `thick` who appear less than `clear`. This information was gained by analysing the unbalanced results of dice losses from previous, smaller experiments and based on the probabilities used in the synthetical data generation.
@@ -81,6 +81,7 @@ A model was trained on all cloudfree  `scribble`-type images from CloudSEN12 wit
 
 Testing was done on all `high`-labeled images which were randomly cropped to 256x256. Metrics showed following values:
 
+```json
 {
     "cross_entropy": 1.0892133767084538,
     "dice_loss": 0.7443273707116537,
@@ -100,6 +101,7 @@ Testing was done on all `high`-labeled images which were randomly cropped to 256
     ],
     "mean_iou": 0.22326088633283014
 }
+```
 
 ### Results & Discussion
 - class weights could be determined based on synth data and seed
