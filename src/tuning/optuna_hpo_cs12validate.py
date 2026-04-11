@@ -207,9 +207,9 @@ class LWFUNetASPPOptunaCS12Val:
         #val_dataset = S2TIFDataSet(val_names, self.data_root, seed=self.seed)
 
         # optuna suggest hparams:
-        lr = trial.suggest_float('lr', 1e-6, 1e-2, log=True)
+        lr = trial.suggest_float('lr', 1e-5, 1e-1, log=True)
         #batch_size = 12 # trial.suggest_categorical('batch_size', [8, 12, 16])
-        weight_decay = trial.suggest_float('weight_decay', 1e-4, 1e-2, log=True)
+        weight_decay = trial.suggest_float('weight_decay', 1e-4, 5e-2, log=True)
         bn_momentum = trial.suggest_categorical('batch_norm_momentum', [0.1, 0.9, 0.99])
 
         # deprecate
@@ -230,9 +230,10 @@ class LWFUNetASPPOptunaCS12Val:
         )
 
         batch_factor = 5
-        samples_per_epoch = self.batch_size * int(1/(20) * len(val_dataset))
+
+        samples_per_epoch = self.batch_size * int(0.1 * len(val_dataset))
         # 'replacement=False' ensures no duplicates within the same epoch
-        sampler = RandomSampler(val_dataset, num_samples=samples_per_epoch, replacement=False)
+        val_sampler = RandomSampler(val_dataset, num_samples=samples_per_epoch, replacement=False)
 
         self.val_loader = DataLoader(
             val_dataset,
@@ -241,7 +242,7 @@ class LWFUNetASPPOptunaCS12Val:
             num_workers=self.num_workers,
             prefetch_factor=self.prefetch_factor,
             pin_memory=True,
-            sampler = sampler,
+            sampler = val_sampler,
         )
 
         # Create model with ASPP and residual connections
@@ -299,7 +300,10 @@ class LWFUNetASPPOptunaCS12Val:
         )
 
         # TensorBoard writer
-        # self.writer = SummaryWriter(log_dir=str(self.experiment_dir))
+        self.writer = SummaryWriter(
+            log_dir=str(self.experiment_dir), 
+            filename_suffix=f"_{trial.number}"
+        )
         
 
     def validate_model(self) -> dict[str, float]:
@@ -432,6 +436,13 @@ class LWFUNetASPPOptunaCS12Val:
                     train_running_dice_loss_since_val += dice_loss.item() * batch_size
                 train_samples_since_val += batch_size
 
+                # Log learning rate every step
+                self.writer.add_scalar(
+                    "Train/learning_rate",
+                    self.optimizer.param_groups[0]["lr"],
+                    global_step,
+                )
+
                 global_step += 1
 
                 # STEP-BASED VALIDATION
@@ -445,8 +456,71 @@ class LWFUNetASPPOptunaCS12Val:
                 if global_step % current_val_freq == 0:
                     validation_cycle += 1
 
+                    # Log averaged training loss since last validation
+                    if train_samples_since_val > 0:
+                        train_loss_avg = (
+                            train_running_loss_since_val / train_samples_since_val
+                        )
+                        train_ce_loss_avg = (
+                            train_running_ce_loss_since_val / train_samples_since_val
+                        )
+                        train_dice_loss_avg = (
+                            train_running_dice_loss_since_val / train_samples_since_val
+                        )
+
+                        self.writer.add_scalar(
+                            "Train/total_loss_interval", train_loss_avg, global_step
+                        )
+                        self.writer.add_scalar(
+                            "Train/ce_loss_interval", train_ce_loss_avg, global_step
+                        )
+                        if self.use_dice_loss:
+                            self.writer.add_scalar(
+                                "Train/dice_loss_interval",
+                                train_dice_loss_avg,
+                                global_step,
+                            )
+
+                    # Reset training accumulators
+                    train_running_loss_since_val = 0.0
+                    train_running_ce_loss_since_val = 0.0
+                    train_running_dice_loss_since_val = 0.0
+                    train_samples_since_val = 0
+
                     # Run validation
                     val_metrics = self.validate_model()
+
+                    # TensorBoard Logging
+                    self.writer.add_scalar(
+                        "Val/total_loss", val_metrics["loss"], global_step
+                    )
+                    self.writer.add_scalar(
+                        "Val/ce_loss", val_metrics["ce_loss"], global_step
+                    )
+                    if self.use_dice_loss:
+                        self.writer.add_scalar(
+                            "Val/dice_loss", val_metrics["dice_loss"], global_step
+                        )
+
+                    # Console output
+                    logger.info(
+                        "\n[Step %d | Cycle %d | Epoch %d]",
+                        global_step,
+                        validation_cycle,
+                        epoch + 1,
+                    )
+                    logger.info("  Val Loss: %.4f", val_metrics["loss"])
+                    if self.use_dice_loss:
+                        logger.info("    ├─ CE Loss:   %.4f", val_metrics["ce_loss"])
+                        logger.info("    └─ Dice Loss: %.4f", val_metrics["dice_loss"])
+                    else:
+                        logger.info("    └─ CE Loss:   %.4f", val_metrics["ce_loss"])
+
+                    # Checkpoint Saving
+                    is_best = val_metrics["loss"] < best_val_loss
+                    if is_best:
+                        best_val_loss = val_metrics["loss"]
+
 
                     # Return to training mode
                     self.model.train()

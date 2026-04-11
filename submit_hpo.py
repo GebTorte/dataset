@@ -32,7 +32,7 @@ def submit_hpo(
     n_trials:int = 10,
     experiment_id: str = "cloudsen12_hpo",
     partition: str = "hpda2_compute_gpu",
-    time: str = "03:00:00",
+    time: str = "72:00:00",
     gpus_per_node: int = 1,
     mem_gb: int = 256,
     account: str = "pn39sa-c",

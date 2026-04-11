@@ -196,10 +196,10 @@ class LWFUNetASPPOptuna:
         # optuna suggest hparams:
         lr = trial.suggest_float('lr', 1e-6, 1e-2, log=True)
         #batch_size = 12 # trial.suggest_categorical('batch_size', [8, 12, 16])
-        weight_decay = trial.suggest_float('weight_decay', 1e-4, 1e-2, log=True)
-        bn_momentum = trial.suggest_categorical('batch_norm_momemntum', [0.1, 0.9, 0.99])
+        weight_decay = trial.suggest_float('weight_decay', 1e-4, 5e-2, log=True)
+        bn_momentum = trial.suggest_categorical('batch_norm_momentum', [0.1, 0.9, 0.99])
 
-        if not self.class_weights & self.use_class_weights:
+        if (not self.class_weights) & self.use_class_weights:
             class_weights = [trial.suggest_float(f'class_weight{i}', 1., 19., step=6.) for i in range(self.num_classes)]
         else:
             class_weights = self.class_weights
