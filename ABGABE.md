@@ -43,7 +43,7 @@ Provide at least loss curves for the trainings, for train and val. If you want t
 
 Cloud detection in multispectral satellite imagery is a base problem in multispectral remote sensing. There are establised algorithms for cloud detection with high accuracies(Sen2Cor, FMask, etc.). They are functions of physical and geometric properties of clouds, their effect measured at the sensor and more scientific knowledge on clouds. A downside is their high computational cost compared to inference on GPU. Another argument is their asymptotical limit in accuracy. Deep Learning (DL) poses a promising method to mitigate both issues, as firstly matrix multiplication runs fast on modern GPUs and secondly DL has the capabilities of detecting new regression features of bands that could indicate cloud.
 
-Since Deep Learning needs Ground Truth (GT) data to train on, and the cloud masks in this data are mainly calculated by said algorithms, DL is limited by their accuracy and False Positives and Negatives impair the training data further. Therefore my idea is to use synthetically generated clouds and perfect masks on cloudfree images and use these to train a standard UNet on, to see if it performs well. Luckily Mikolaj Czerkawski et al. implemented exactly this cloud generation (https://github.com/strath-ai/SatelliteCloudGenerator). I use their method on cloudfree images of the CloudSEN12 dataset (https://cloudsen12.github.io/) to generate training data.
+Since Deep Learning needs Ground Truth (GT) data to train on, and the cloud masks in this data are mainly calculated by said algorithms, DL is limited by their accuracy and False Positives and Negatives impair the training data further. Therefore my idea is to use synthetically generated clouds and perfect masks on cloudfree images and use these to train a standard UNet on, to see if it performs well. Luckily Mikolaj Czerkawski et al. implemented a sophisticated version of this idea here (https://github.com/strath-ai/SatelliteCloudGenerator). I use their method on cloudfree images of the CloudSEN12 dataset (https://cloudsen12.github.io/) to generate training data.
 
 This project has a strong focus on dataset generation and limited time was spent on model training.
 
@@ -59,12 +59,16 @@ This project has a strong focus on dataset generation and limited time was spent
 ### Implementation
 
 #### Dataset
+The CloudSEN12 dataset for `scribble` and `high` annotation-types were downloaded via a jupyter-notebook from the servers listed in the publication. Having the raw data enables more in-depth manipulation and control over training/test data which is needed for this project.
+
+Multiple `torch`-datasets were implemented to load CloudSEN12 images.
+Namely, ...
 
  1. SatelliteCloudGenerator on scribble
  2. validation via cloudsen12 high
 
 #### Hyperparameter-Optimisation HPO
-First trainings on default-like parameters showed sub-par results and thus, hyperparameter-optimization was considered. It was then realised using the `optuna` library.
+First trainings on default-like parameters showed sub-par results and thus hyperparameter-optimization was realised using the `optuna` library.
 To be compatible with SLURM, a existing *Trainer class was extended with a `objective` method, which is called by optuna, to deliver a objective for optimization. 
 Then, in the `__call__` method, a optuna-study is created and later passed on to be executed as a SLURM job. 
 The study results in a parameter-set optimal for the search space found in the number of trails within the study.
