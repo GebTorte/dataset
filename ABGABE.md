@@ -45,6 +45,8 @@ Cloud detection in multispectral satellite imagery is a base problem in multispe
 
 Since Deep Learning needs Ground Truth (GT) data to train on, and the cloud masks in this data are mainly calculated by said algorithms, DL is limited by their accuracy and False Positives and Negatives impair the training data further. Therefore my idea is to use synthetically generated clouds and perfect masks on cloudfree images and use these to train a standard UNet on, to see if it performs well. Luckily Mikolaj Czerkawski et al. implemented exactly this cloud generation (https://github.com/strath-ai/SatelliteCloudGenerator). I use their method on cloudfree images of the CloudSEN12 dataset (https://cloudsen12.github.io/) to generate training data.
 
+This project has a strong focus on dataset generation and limited time was spent on model training.
+
 ### Pipeline overview
 <head>
 <title>diagram</title>
@@ -58,28 +60,41 @@ Since Deep Learning needs Ground Truth (GT) data to train on, and the cloud mask
 
 #### Dataset
 
-
  1. SatelliteCloudGenerator on scribble
  2. validation via cloudsen12 high
 
 #### Hyperparameter-Optimisation HPO
-Because the task is not a trivial one and first trainings on default-like parameters showed sub-par results, hyperparameter-optimization was considered. It was implemented using the optuna library.
-To be compatible with SLURM, a existing *Trainer class as extended with the `objective` method, which is called by optuna, to deliver a objective for optimization. 
-Then, in the `__call__` method, a study is created and later passed on to be executed as a SLURM job.
+First trainings on default-like parameters showed sub-par results and thus, hyperparameter-optimization was considered. It was then realised using the `optuna` library.
+To be compatible with SLURM, a existing *Trainer class was extended with a `objective` method, which is called by optuna, to deliver a objective for optimization. 
+Then, in the `__call__` method, a optuna-study is created and later passed on to be executed as a SLURM job. 
+The study results in a parameter-set optimal for the search space found in the number of trails within the study.
 
 ### Experiments
-HPO was run with following parameters. The weights for classes were arbitrarily chosen, but on the grounds that `thin` and `shadow` appear less than `thick` who appear less than `clear`. This information was gained by analysing the unbalanced results of dice losses from previous, smaller experiments and based on the probabilities used in the synthetical data generation.
+First, HPO was done on both synthetical training and validation data. To compare against tested results, a Test-Dataset on CloudSEN12 `high` patches was quickly implemented and used in validation steps.
+
+HPO was run with below parameters. The weights for classes were arbitrarily chosen, but on the grounds that `thin` and `shadow` appear less than `thick` which appear less than `clear`. This information was gained by analysing the unbalanced results of dice losses from previous, smaller experiments and based on the probabilities used in the synthetical data generation.
+
 ```bash 
 python3 submit_hpo.py --user my54user --n-trials 100 --epochs 5 --experiment-id hpo_006_cs12val_nt100-weights1244_epochs5 --aspp --class-weights 1.0 2.0 4.0 4.0 --use-cloudsen12-validation
 ```
 
+The range of hyperparameters was defined as follows:
+```python
+# optuna suggest hparams:
+lr = trial.suggest_float('lr', 1e-3, 1e-1, log=True)
+#batch_size = 12 # trial.suggest_categorical('batch_size', [8, 12, 16])
+weight_decay = trial.suggest_float('weight_decay', 1e-4, 1e-1, log=True)
+bn_momentum = trial.suggest_categorical('batch_norm_momentum', [0.1, 0.9, 0.99])
+```
+
+Due to limited time in the SLURM job setup, not all 100 trials were exhausted.
+
+Secondly, because `SummaryWriter` did not work out of the box for multiple trials and overwrote results for each new trial, no useful training/HPO graphs can be displayed here. This trivial error eludes the author until time of submission and will be fixed at some later time.
+
 ### Training
 
-A model was trained on all cloudfree  `scribble`-type images from CloudSEN12 with the best resulting parameters from the HPO. 
-
-
-
-Testing was done on all `high`-labeled images which were randomly cropped to 256x256. Metrics showed following values:
+A model was trained on all cloudfree `scribble`-type images from CloudSEN12 with the best resulting parameter-set from the HPO. 
+For it, Testing was done on all `high`-labeled images which were randomly cropped to 256x256. Metrics showed following values:
 
 ```json
 {
@@ -102,6 +117,23 @@ Testing was done on all `high`-labeled images which were randomly cropped to 256
     "mean_iou": 0.22326088633283014
 }
 ```
+
+Sample predictions were done and look as follows:
+Encoding: 
+Value    | meaning
+0 (blue) | clear
+1 (red)  | cloud
+2 (pink) | thin cloud
+3 (light blue) | shadow
+<img src="cloudsen12_scribble_aspp_multitypecloud_256_2_hpo006_params_predictions.png"
+     alt="Predictions 1"
+     style="float: left; margin-right: 10px;" />
+<img src="cloudsen12_scribble_aspp_multitypecloud_256_2_hpo006_params_predictions2.png"
+     alt="Predictions 2"
+     style="float: left; margin-right: 10px;" />
+<img src="cloudsen12_scribble_aspp_multitypecloud_256_2_hpo006_params_predictions3.png"
+     alt="Predictions 3"
+     style="float: left; margin-right: 10px;" />
 
 ### Results & Discussion
 - class weights could be determined based on synth data and seed
