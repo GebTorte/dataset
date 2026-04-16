@@ -48,6 +48,7 @@ Since Deep Learning needs Ground Truth (GT) data to train on, and the cloud mask
 This project has a strong focus on dataset generation and limited time was spent on model training.
 
 ### Pipeline overview
+(Hint: to display, enable insecure html/javascript content)
 <head>
 <title>diagram</title>
 <meta charset="utf-8"/>
@@ -58,22 +59,26 @@ This project has a strong focus on dataset generation and limited time was spent
 
 ### Implementation
 
+#### Model architecture
+Model architecture was extended by factorized batch-normalization layers, to include this momentum parameter in HPO.
+
 #### Dataset
 The CloudSEN12 dataset for `scribble` and `high` annotation-types were downloaded via a jupyter-notebook from the servers listed in the publication. Having the raw data enables more in-depth manipulation and control over training/test data which is needed for this project.
 
 Multiple `torch`-datasets were implemented to load CloudSEN12 images.
-Namely, ...
+Namely, S2TIFDataSet, S2TIFDataSet512, S2TIFDataSet_256_4x which respectively load the images and crop them to (256, 256) with torchvisions `RandomCrop`, or buffer them with `Pad` using reflect mode and lastly crop an (509, 509) image into four patches of (256, 256) while buffering bottom right sides. Within each, a SatelliteCloudGenerator cloud is generated for every patch and passed as y vector. The band data is loaded into a torch `FloatTensor` and bands nr. 1 to 12 returned as X.
 
- 1. SatelliteCloudGenerator on scribble
- 2. validation via cloudsen12 high
+Dually, TestS2TIFDataSet and TestS2TIFDataSet512 load the band data as X, but pass the 14th band (which contains the CloudSEN12 Ground Truth) as X.
 
-#### Hyperparameter-Optimisation HPO
+The idea is to generate synthetic clouds for training on `scribble`-type images and have the option to validate/test on images with `high` annotation type.
+
+### Experiments
 First trainings on default-like parameters showed sub-par results and thus hyperparameter-optimization was realised using the `optuna` library.
 To be compatible with SLURM, a existing *Trainer class was extended with a `objective` method, which is called by optuna, to deliver a objective for optimization. 
 Then, in the `__call__` method, a optuna-study is created and later passed on to be executed as a SLURM job. 
 The study results in a parameter-set optimal for the search space found in the number of trails within the study.
 
-### Experiments
+#### Hyperparameter-Optimisation HPO
 First, HPO was done on both synthetical training and validation data. To compare against tested results, a Test-Dataset on CloudSEN12 `high` patches was quickly implemented and used in validation steps.
 
 HPO was run with below parameters. The weights for classes were arbitrarily chosen, but on the grounds that `thin` and `shadow` appear less than `thick` which appear less than `clear`. This information was gained by analysing the unbalanced results of dice losses from previous, smaller experiments and based on the probabilities used in the synthetical data generation.
@@ -86,19 +91,18 @@ The range of hyperparameters was defined as follows:
 ```python
 # optuna suggest hparams:
 lr = trial.suggest_float('lr', 1e-3, 1e-1, log=True)
-#batch_size = 12 # trial.suggest_categorical('batch_size', [8, 12, 16])
 weight_decay = trial.suggest_float('weight_decay', 1e-4, 1e-1, log=True)
 bn_momentum = trial.suggest_categorical('batch_norm_momentum', [0.1, 0.9, 0.99])
 ```
 
 Due to limited time in the SLURM job setup, not all 100 trials were exhausted.
 
-Secondly, because `SummaryWriter` did not work out of the box for multiple trials and overwrote results for each new trial, no useful training/HPO graphs can be displayed here. This trivial error eludes the author until time of submission and will be fixed at some later time.
+Secondly, because `SummaryWriter` did not work out of the box for multiple trials and overwrote results for each new trial, no useful training/HPO graphs can be displayed here. This trivial error eludes the author until time of submission and will be fixed at some later time, if needed.
 
 ### Training
 
 A model was trained on all cloudfree `scribble`-type images from CloudSEN12 with the best resulting parameter-set from the HPO. 
-For it, Testing was done on all `high`-labeled images which were randomly cropped to 256x256. Metrics showed following values:
+For it, Testing was done on all `high`-labeled images which were randomly cropped to 256x256 (S2TIFDataSet). Metrics showed following values:
 
 ```json
 {
@@ -122,7 +126,9 @@ For it, Testing was done on all `high`-labeled images which were randomly croppe
 }
 ```
 
-Sample predictions were done and look as follows:
+#### Sample Predictions
+The first row shows the RGB images, the second the Ground Truth layers and the third the model predictions.
+
 Encoding: 
 Value    | meaning
 0 (blue) | clear
@@ -140,6 +146,7 @@ Value    | meaning
      style="float: left; margin-right: 10px;" />
 
 ### Results & Discussion
+
 - class weights could be determined based on synth data and seed
 - verification of synth cloud masks should be ok, but should a 1-0.05 transparency cloud be considered as (thick) cloud? How is it in cloudsen12?
 - not all training data from cloudsen12 was used (only scribble)
