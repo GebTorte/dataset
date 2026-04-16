@@ -68,7 +68,11 @@ The CloudSEN12 dataset for `scribble` and `high` annotation-types were downloade
 Multiple `torch`-datasets were implemented to load CloudSEN12 images.
 Namely, S2TIFDataSet, S2TIFDataSet512, S2TIFDataSet_256_4x which respectively load the images and crop them to (256, 256) with torchvisions `RandomCrop`, or buffer them with `Pad` using reflect mode and lastly crop an (509, 509) image into four patches of (256, 256) while buffering bottom right sides. Within each, a SatelliteCloudGenerator cloud is generated for every patch and passed as y vector. The band data is loaded into a torch `FloatTensor` and bands nr. 1 to 12 returned as X.
 
-Dually, TestS2TIFDataSet and TestS2TIFDataSet512 load the band data as X, but pass the 14th band (which contains the CloudSEN12 Ground Truth) as X.
+For the cloud generation 
+.................................................
+`stat_mag_scaler`-method
+
+Dually to before, TestS2TIFDataSet and TestS2TIFDataSet512 load the band data as X, but pass the 14th band (which contains the CloudSEN12 Ground Truth) as X.
 
 The idea is to generate synthetic clouds for training on `scribble`-type images and have the option to validate/test on images with `high` annotation type.
 
@@ -146,6 +150,8 @@ Value    | meaning
      style="float: left; margin-right: 10px;" />
 
 ### Results & Discussion
+
+The main result are the 
 
 - class weights could be determined based on synth data and seed
 - verification of synth cloud masks should be ok, but should a 1-0.05 transparency cloud be considered as (thick) cloud? How is it in cloudsen12?
