@@ -1,42 +1,4 @@
 # README for ABGABE
-
-## task
-You are asked to hand in a project, as we have set up in the class in the geo-oma-24 folder, and you can easily built on that and extend it. Since evaluating code in 2026 is not the smartest way to teach, i want you to demonstrate that you deeply understand the concepts we have talked about, still in a hands on approach.
-
-For the hands on part, you can either work on your "own" DL project, or simply extend the one we have set up. This is on you, the requirements of the assignment apply to both cases. Either way, the hands on task should be designed as such:
-
-    - implement a the pytorch based DL-pipeline.
-    - choose a baseline to compare against, and implement it.
-    - modify the baseline in a way you think is interesting/helping to perform better on your model, and implement it. I would recommend to focus on one of the typical building blocks in our pipeline, but sure you can also tackle all, if you have the time.
-    run experiments to compare the modified version with the baseline. And provide a brief report.
-
-If you modify the SLURM based workflow of our class project, or if you do everything in jupyter notebooks and interactive sessions, is on you. I recommend to use the SLURM workflow, since it is more realistic and you will get more familiar with it, but if you want to do it in a more interactive way, that is also fine. The important thing is that you understand the concepts and can demonstrate that understanding in your implementation and report. I will not evaluate the coding part.
-
-The final project folder should contain:
-
-    Pipeline Overview In e.g. the README.md, describe the typical DL-pipeline we have talked about over and over during the class, now is the time you write it down yourself. Even better, draw the major components in a diagram and in text you can focus on their details. The pipeline description should be general, not yet related or focused on your task.
-
-    Brief Problem Description Now introduce the problem at hand, very briefly. Input data and which goal you aim to achieve overall, not the details you focus on later.
-
-e.g. "I have a set of Sentinel-1 images showing offshore infrastructure, and I want to detect the presence of offshore wind turbines in these images and classify their deployment status."
-
-You can be more verbose if you like, also providing some images to describe the data and goal is always a good idea.
-
-    Baseline Description Introduce a baseline setup, your standard implementation of a DL-pipeline. Follow our typical structure which we have discussed in the class over and over.
-
-    Motivation for Modification Now briefly describe on which problem you want to focus on, e.g. in relation to observed baseline performance, or an idea you came up with from a conceptual standpoint. Answer the question: What limitation of the baseline are you addressing?
-
-    Implementation Description Describe how you implemented the modification, e.g. in the last section you said something like, "Classes are unbalanced in the dataset, leading to poor performance on the minority class, therefore I want to implement a weighted loss function to address this issue." Now you can describe how you implemented the weighted loss function, and how it fits into the overall pipeline. e.g. "I go for a weighted cross entropy loss, where the weights are calculated based on the class distribution in the training set. I implemented this in the loss function module of my pipeline, and it is called during the training loop as usual."
-
-You should be a bit more verbose here, but the important thing is that you clearly describe what you did and how it fits into the overall pipeline, its not necessary to show code here.
-
-    Experiments Run at least two experiments comparing your adjustment with the baseline. You are invited to run more, e.g. in relation to the above example-motivation, show different combinations of weight values for the loss.
-
-Provide at least loss curves for the trainings, for train and val. If you want to report other metrics, feel free to do so. You can create nice plots from the available data in the tf.event files, but it is also fine for me if you simply use screenshots of the tensorboard in this class.
-
-    Results and Discussion Show the comparison of your baseline to your adjustment(s) and shortly discuss why the result looks like it does, if the outcome is worse, this is no problem :) I want you to show that you can run experiments not to process perfect results.
-
-
 ## ABGABE
 
 ### Problem description
@@ -68,9 +30,29 @@ The CloudSEN12 dataset for `scribble` and `high` annotation-types were downloade
 Multiple `torch`-datasets were implemented to load CloudSEN12 images.
 Namely, S2TIFDataSet, S2TIFDataSet512, S2TIFDataSet_256_4x which respectively load the images and crop them to (256, 256) with torchvisions `RandomCrop`, or buffer them with `Pad` using reflect mode and lastly crop an (509, 509) image into four patches of (256, 256) while buffering bottom right sides. Within each, a SatelliteCloudGenerator cloud is generated for every patch and passed as y vector. The band data is loaded into a torch `FloatTensor` and bands nr. 1 to 12 returned as X.
 
-For the cloud generation 
-.................................................
-`stat_mag_scaler`-method
+For the cloud generation, a new method for cloud reflectance magnitude was implemented, based on papers analyzing statistical cloud reflectance values (https://www.scribd.com/document/683252305/Cloud-Spectral-Reflectance, https://www.researchgate.net/publication/307830440_Synergetic_cloud_fraction_determination_for_SCIAMACHY_using_MERIS/figures). 
+Channel-wise standard-deviations were determined for all Sentinel-2 bands:
+
+```python
+channel_std_devs = [
+        [0.32, 0.78],
+        [0.35, 0.81],
+        [0.36, 0.82],
+        [0.38, 0.85],
+        [0.37, 0.83],
+        [0.37, 0.84],
+        [0.38, 0.85],
+        [0.38, 0.86],
+        [0.39, 0.87],
+        [0.05, 0.65],  # cirrus
+        [0.15, 0.55],
+        [0.08, 0.36],
+    ]
+``` 
+
+Upon calling the `stat_mag_scaler`-method, it randomly draws a magnitude and returns a correspondingly intensive reflectance value for every band. These values are used by the SatelliteCloudGenerator functionality in the cloud generation. The idea is to diversify the cloud dataset while keeping within empirical bounds of real clouds.
+
+Since SatelliteCloudGenerator enables parametization of for cloud types, both `thick` and `thin` clouds were added to an image based on a threshold probability. Resulting are images without cloud, some with only thick clouds, some with only thin and some with both types. Shadows were always added where a cloud was present.
 
 Dually to before, TestS2TIFDataSet and TestS2TIFDataSet512 load the band data as X, but pass the 14th band (which contains the CloudSEN12 Ground Truth) as X.
 
@@ -151,13 +133,19 @@ Value    | meaning
 
 ### Results & Discussion
 
-The main result are the 
+The main result are the the Deep Learning ready datasets which build on CloudSEN12 data and add SatelliteCloudGenerator functionality for synthetic cloud generation.
 
-- class weights could be determined based on synth data and seed
-- verification of synth cloud masks should be ok, but should a 1-0.05 transparency cloud be considered as (thick) cloud? How is it in cloudsen12?
-- not all training data from cloudsen12 was used (only scribble)
+While the base functionality works and produces interesting results, more work can be done in a number of places:
+- For better understanding of dice loss weights, a deterministic analysis of distribution between all types of pixels could be done. Weights could then be adjusted proportionally.
+- An experiment could be run on the impact of transparency on cloud definition. Especially at low thresholds the questions arises, when is a cloud a cloud, especially for a DL segmentation task. Also what differentiates a `thin` from a `thick` from a `cirrus` cloud in terms of reflectance at the sensor.
+- While the anomaly of the cirrus band known during these first steps of the project and might be a cause for inaccuracies in dataset and training, no solution, other than eliminating it from training data was really considered so far.
+- Image data from CloudSEN12 was not exhausted (especially with the 256-random-crop dataset) and a lot of images and thus training material has not been used yet. The issue of determining a cloud-free image remains here.
+- Different model architectures could be implemented and tested on the datasets. 
 
+As it stands, the synthetic generation of clouds poses a promising idea, the realization and implementation of real-world-like clouds is not a trivial task and requires more specific research.
 
 ### Repositories
-- CloudSEN12 Dataset: https://github.com/GebTorte/dataset
-- https://github.com/GebTorte/SatelliteCloudGenerator
+- CloudSEN12 Dataset fork: https://github.com/GebTorte/dataset
+- SatelliteCloudGenerator fork: https://github.com/GebTorte/SatelliteCloudGenerator
+
+To rebuild, first clone the dataset and within its top folder clone SatelliteCloudGenerator.
