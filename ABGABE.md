@@ -1,7 +1,5 @@
 # README for ABGABE
-## ABGABE
-
-### Problem description
+## Problem description
 
 Cloud detection in multispectral satellite imagery is a base problem in multispectral remote sensing. There are establised algorithms for cloud detection with high accuracies(Sen2Cor, FMask, etc.). They are functions of physical and geometric properties of clouds, their effect measured at the sensor and more scientific knowledge on clouds. A downside is their high computational cost compared to inference on GPU. Another argument is their asymptotical limit in accuracy. Deep Learning (DL) poses a promising method to mitigate both issues, as firstly matrix multiplication runs fast on modern GPUs and secondly DL has the capabilities of detecting new regression features of bands that could indicate cloud.
 
@@ -9,7 +7,7 @@ Since Deep Learning needs Ground Truth (GT) data to train on, and the cloud mask
 
 This project has a strong focus on dataset generation and limited time was spent on model training.
 
-### Pipeline overview
+## Pipeline overview
 (Hint: to display, enable insecure html/javascript content)
 <head>
 <title>diagram</title>
@@ -19,35 +17,35 @@ This project has a strong focus on dataset generation and limited time was spent
 <script type="text/javascript" src="https://viewer.diagrams.net/js/viewer-static.min.js"></script>
 </body>
 
-### Implementation
+## Implementation
 
-#### Model architecture
+### Model architecture
 Model architecture was extended by factorized batch-normalization layers, to include this momentum parameter in HPO.
 
-#### Dataset
+### Dataset
 The CloudSEN12 dataset for `scribble` and `high` annotation-types were downloaded via a jupyter-notebook from the servers listed in the publication. Having the raw data enables more in-depth manipulation and control over training/test data which is needed for this project.
 
 Multiple `torch`-datasets were implemented to load CloudSEN12 images.
 Namely, S2TIFDataSet, S2TIFDataSet512, S2TIFDataSet_256_4x which respectively load the images and crop them to (256, 256) with torchvisions `RandomCrop`, or buffer them with `Pad` using reflect mode and lastly crop an (509, 509) image into four patches of (256, 256) while buffering bottom right sides. Within each, a SatelliteCloudGenerator cloud is generated for every patch and passed as y vector. The band data is loaded into a torch `FloatTensor` and bands nr. 1 to 12 returned as X.
 
 For the cloud generation, a new method for cloud reflectance magnitude was implemented, based on papers analyzing statistical cloud reflectance values (https://www.scribd.com/document/683252305/Cloud-Spectral-Reflectance, https://www.researchgate.net/publication/307830440_Synergetic_cloud_fraction_determination_for_SCIAMACHY_using_MERIS/figures). 
-Channel-wise standard-deviations were determined for all Sentinel-2 bands:
+Channel-wise standard-deviation-bounds were determined for all Sentinel-2 bands:
 
 ```python
 channel_std_devs = [
-        [0.32, 0.78],
-        [0.35, 0.81],
-        [0.36, 0.82],
-        [0.38, 0.85],
-        [0.37, 0.83],
-        [0.37, 0.84],
-        [0.38, 0.85],
-        [0.38, 0.86],
-        [0.39, 0.87],
-        [0.05, 0.65],  # cirrus
-        [0.15, 0.55],
-        [0.08, 0.36],
-    ]
+    [0.32, 0.78],
+    [0.35, 0.81],
+    [0.36, 0.82],
+    [0.38, 0.85],
+    [0.37, 0.83],
+    [0.37, 0.84],
+    [0.38, 0.85],
+    [0.38, 0.86],
+    [0.39, 0.87],
+    [0.05, 0.65],  # cirrus
+    [0.15, 0.55],
+    [0.08, 0.36],
+]
 ``` 
 
 Upon calling the `stat_mag_scaler`-method, it randomly draws a magnitude and returns a correspondingly intensive reflectance value for every band. These values are used by the SatelliteCloudGenerator functionality in the cloud generation. The idea is to diversify the cloud dataset while keeping within empirical bounds of real clouds.
@@ -58,13 +56,13 @@ Dually to before, TestS2TIFDataSet and TestS2TIFDataSet512 load the band data as
 
 The idea is to generate synthetic clouds for training on `scribble`-type images and have the option to validate/test on images with `high` annotation type.
 
-### Experiments
+## Experiments
 First trainings on default-like parameters showed sub-par results and thus hyperparameter-optimization was realised using the `optuna` library.
 To be compatible with SLURM, a existing *Trainer class was extended with a `objective` method, which is called by optuna, to deliver a objective for optimization. 
 Then, in the `__call__` method, a optuna-study is created and later passed on to be executed as a SLURM job. 
 The study results in a parameter-set optimal for the search space found in the number of trails within the study.
 
-#### Hyperparameter-Optimisation HPO
+### Hyperparameter-Optimisation HPO
 First, HPO was done on both synthetical training and validation data. To compare against tested results, a Test-Dataset on CloudSEN12 `high` patches was quickly implemented and used in validation steps.
 
 HPO was run with below parameters. The weights for classes were arbitrarily chosen, but on the grounds that `thin` and `shadow` appear less than `thick` which appear less than `clear`. This information was gained by analysing the unbalanced results of dice losses from previous, smaller experiments and based on the probabilities used in the synthetical data generation.
@@ -85,7 +83,7 @@ Due to limited time in the SLURM job setup, not all 100 trials were exhausted.
 
 Secondly, because `SummaryWriter` did not work out of the box for multiple trials and overwrote results for each new trial, no useful training/HPO graphs can be displayed here. This trivial error eludes the author until time of submission and will be fixed at some later time, if needed.
 
-### Training
+## Training
 
 A model was trained on all cloudfree `scribble`-type images from CloudSEN12 with the best resulting parameter-set from the HPO. 
 For it, Testing was done on all `high`-labeled images which were randomly cropped to 256x256 (S2TIFDataSet). Metrics showed following values:
@@ -112,7 +110,7 @@ For it, Testing was done on all `high`-labeled images which were randomly croppe
 }
 ```
 
-#### Sample Predictions
+### Sample Predictions
 The first row shows the RGB images, the second the Ground Truth layers and the third the model predictions.
 
 Encoding: 
@@ -131,7 +129,7 @@ Value    | meaning
      alt="Predictions 3"
      style="float: left; margin-right: 10px;" />
 
-### Results & Discussion
+## Results & Discussion
 
 The main result are the the Deep Learning ready datasets which build on CloudSEN12 data and add SatelliteCloudGenerator functionality for synthetic cloud generation.
 
@@ -141,10 +139,11 @@ While the base functionality works and produces interesting results, more work c
 - While the anomaly of the cirrus band known during these first steps of the project and might be a cause for inaccuracies in dataset and training, no solution, other than eliminating it from training data was really considered so far.
 - Image data from CloudSEN12 was not exhausted (especially with the 256-random-crop dataset) and a lot of images and thus training material has not been used yet. The issue of determining a cloud-free image remains here.
 - Different model architectures could be implemented and tested on the datasets. 
+- It stands to be tested if the `stat_mag_scaler`-approach improves the cloud-generation compared to the original method.
 
-As it stands, the synthetic generation of clouds poses a promising idea, the realization and implementation of real-world-like clouds is not a trivial task and requires more specific research.
+As it stands, the synthetic generation of clouds poses a promising idea, while the realization and implementation of real-world-like clouds is not a trivial task and requires more specific research.
 
-### Repositories
+## Repositories
 - CloudSEN12 Dataset fork: https://github.com/GebTorte/dataset
 - SatelliteCloudGenerator fork: https://github.com/GebTorte/SatelliteCloudGenerator
 
